@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
-import { cloudinaryConfigured, offerImageSrcUrl, uploadOfferImage } from "../lib/cloudinary.js";
+import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { leadServiceLabel, sendLeadUpdateViaWhatsApp } from "../lib/whatsapp.js";
 
@@ -80,7 +80,7 @@ export default function Admin() {
   const [offerStatus, setOfferStatus] = useState(null);
   const [offerVisible, setOfferVisible] = useState(false);
   const [offerImageFailed, setOfferImageFailed] = useState(false);
-  const [offerVersion, setOfferVersion] = useState(0);
+  const [offerUrl, setOfferUrl] = useState(null);
   const [offerProgress, setOfferProgress] = useState(0);
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
@@ -105,18 +105,17 @@ export default function Admin() {
     setOfferStatus({ loading: true });
     setOfferProgress(0);
     try {
-      await uploadOfferImage(offerFile, setOfferProgress);
-      // version busts Cloudinary's CDN cache and every browser's image
-      // cache — the delivery URL is otherwise identical on every upload
-      // (fixed public_id), so without this, admins and visitors alike kept
-      // seeing the previous image until their cache happened to expire.
-      const version = Date.now();
-      await setDoc(doc(db, "settings", "offerBanner"), { visible: true, version });
+      // Each upload gets a brand-new Cloudinary URL (see lib/cloudinary.js —
+      // the preset doesn't have Overwrite enabled, so reusing a fixed
+      // public_id silently no-oped and kept serving the original image).
+      // Storing the real URL means there's never a stale copy to bust.
+      const url = await uploadOfferImage(offerFile, setOfferProgress);
+      await setDoc(doc(db, "settings", "offerBanner"), { visible: true, url });
       setOfferStatus({ success: "Offer image updated — it's now live on the homepage." });
       setOfferFile(null);
       setOfferImageFailed(false);
       setOfferVisible(true);
-      setOfferVersion(version);
+      setOfferUrl(url);
     } catch (err) {
       setOfferStatus({ error: err.message });
     } finally {
@@ -163,7 +162,7 @@ export default function Admin() {
 
     getDoc(doc(db, "settings", "offerBanner")).then((snap) => {
       setOfferVisible(snap.exists() && snap.data().visible === true);
-      setOfferVersion(snap.exists() && snap.data().version ? snap.data().version : 0);
+      setOfferUrl(snap.exists() ? snap.data().url || null : null);
     });
 
     api.getLeadsByType("contact").then(setContacts);
@@ -203,8 +202,6 @@ export default function Admin() {
     );
   }
 
-  const offerUrl = offerImageSrcUrl();
-
   return (
     <div className="container-x py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -221,8 +218,8 @@ export default function Admin() {
           <div className="flex h-40 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cream sm:w-64">
             {offerUrl && offerVisible && !offerImageFailed ? (
               <img
-                key={offerVersion}
-                src={`${offerUrl}?v=${offerVersion}`}
+                key={offerUrl}
+                src={offerUrl}
                 alt="Current offer"
                 className="h-full w-full object-cover"
                 onError={() => setOfferImageFailed(true)}

@@ -5,8 +5,6 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-export const OFFER_IMAGE_PUBLIC_ID = "clean-care/offer-banner";
-
 export function cloudinaryConfigured() {
   return Boolean(CLOUD_NAME && UPLOAD_PRESET);
 }
@@ -15,14 +13,21 @@ export function cloudinaryConfigured() {
 // w_1200,c_limit caps delivered width at 1200px (never upscales smaller
 // originals) so a huge upload doesn't ship full-resolution to a banner
 // that's never wider than ~900px on the homepage.
-export function offerImageSrcUrl() {
-  if (!CLOUD_NAME) return null;
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_1200,c_limit/${OFFER_IMAGE_PUBLIC_ID}.jpg`;
+function withTransform(secureUrl) {
+  return secureUrl.replace("/upload/", "/upload/f_auto,q_auto,w_1200,c_limit/");
 }
 
 // XMLHttpRequest instead of fetch specifically because fetch has no
 // reliable cross-browser way to report upload progress for a FormData
 // body; XHR's upload.onprogress does.
+//
+// Every upload gets a unique public_id (timestamp suffix) rather than
+// reusing a fixed one — the "cleancare" preset doesn't have Overwrite
+// enabled, so re-uploading to the same public_id silently no-ops and
+// returns the *original* asset's data (confirmed directly against the
+// Cloudinary API: same version/etag on both uploads, "existing": true).
+// A unique name every time sidesteps that entirely and also means there's
+// never a stale cached copy to bust — the URL itself is always new.
 export function uploadOfferImage(file, onProgress) {
   if (!cloudinaryConfigured()) {
     return Promise.reject(
@@ -30,10 +35,11 @@ export function uploadOfferImage(file, onProgress) {
     );
   }
 
+  const publicId = `clean-care/offer-banner-${Date.now()}`;
   const body = new FormData();
   body.append("file", file);
   body.append("upload_preset", UPLOAD_PRESET);
-  body.append("public_id", OFFER_IMAGE_PUBLIC_ID);
+  body.append("public_id", publicId);
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -53,7 +59,7 @@ export function uploadOfferImage(file, onProgress) {
         return reject(new Error("Upload failed — unexpected response"));
       }
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(data.secure_url);
+        resolve(withTransform(data.secure_url));
       } else {
         reject(new Error(data.error?.message || "Upload failed"));
       }
