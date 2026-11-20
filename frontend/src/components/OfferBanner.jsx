@@ -9,11 +9,15 @@ import { db } from "../lib/firebase.js";
 // Cloudinary's delete API — that needs a secret we don't have in the browser.
 export default function OfferBanner() {
   const [visible, setVisible] = useState(false);
+  const [version, setVersion] = useState(0);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     getDoc(doc(db, "settings", "offerBanner"))
-      .then((snap) => setVisible(snap.exists() && snap.data().visible === true))
+      .then((snap) => {
+        setVisible(snap.exists() && snap.data().visible === true);
+        setVersion(snap.exists() && snap.data().version ? snap.data().version : 0);
+      })
       .catch(() => setVisible(false));
   }, []);
 
@@ -23,7 +27,11 @@ export default function OfferBanner() {
   return (
     <section className="container-x py-10">
       <img
-        src={url}
+        // The delivery URL is otherwise identical on every upload (fixed
+        // Cloudinary public_id), so without ?v=, visitors kept seeing
+        // whatever image Cloudinary's CDN or their own browser had cached
+        // from before the latest upload.
+        src={`${url}?v=${version}`}
         alt="Current offer"
         className="mx-auto w-full max-w-4xl rounded-2xl shadow-lg"
         onError={() => setFailed(true)}

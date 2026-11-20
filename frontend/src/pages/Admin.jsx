@@ -106,12 +106,17 @@ export default function Admin() {
     setOfferProgress(0);
     try {
       await uploadOfferImage(offerFile, setOfferProgress);
-      await setDoc(doc(db, "settings", "offerBanner"), { visible: true });
+      // version busts Cloudinary's CDN cache and every browser's image
+      // cache — the delivery URL is otherwise identical on every upload
+      // (fixed public_id), so without this, admins and visitors alike kept
+      // seeing the previous image until their cache happened to expire.
+      const version = Date.now();
+      await setDoc(doc(db, "settings", "offerBanner"), { visible: true, version });
       setOfferStatus({ success: "Offer image updated — it's now live on the homepage." });
       setOfferFile(null);
       setOfferImageFailed(false);
       setOfferVisible(true);
-      setOfferVersion((v) => v + 1);
+      setOfferVersion(version);
     } catch (err) {
       setOfferStatus({ error: err.message });
     } finally {
@@ -158,6 +163,7 @@ export default function Admin() {
 
     getDoc(doc(db, "settings", "offerBanner")).then((snap) => {
       setOfferVisible(snap.exists() && snap.data().visible === true);
+      setOfferVersion(snap.exists() && snap.data().version ? snap.data().version : 0);
     });
 
     api.getLeadsByType("contact").then(setContacts);
