@@ -63,7 +63,7 @@ const company = {
     country: "India",
   },
   phones: ["+91-81606-77875"],
-  email: "support@cleanandcare.example",
+  email: "cleanandcare.moterakoteshwar@gmail.com",
   social: { youtube: "#", facebook: "#", linkedin: "#" },
   footerQuote: "India's Trusted Live Professional Laundry & Dry-Cleaning Services at Global Standards",
   designCredit: "Clean & Care",
