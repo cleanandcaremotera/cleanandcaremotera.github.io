@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import BookNowModal from "../components/BookNowModal.jsx";
+import CategoryGrid from "../components/CategoryGrid.jsx";
 import HeroIllustration from "../components/HeroIllustration.jsx";
-import OfferBanner from "../components/OfferBanner.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
-import ServiceCard from "../components/ServiceCard.jsx";
 import StarRating from "../components/StarRating.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { img } from "../lib/assets.js";
@@ -16,13 +14,10 @@ function avatarFor(name) {
 
 export default function Home() {
   const { company } = useCompany();
-  const [services, setServices] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [blog, setBlog] = useState([]);
-  const [bookingService, setBookingService] = useState(null);
 
   useEffect(() => {
-    api.getServices().then(setServices).catch(() => {});
     api.getTestimonials().then(setTestimonials).catch(() => {});
     api.getBlog().then(setBlog).catch(() => {});
   }, []);
@@ -54,10 +49,6 @@ export default function Home() {
         </div>
       </section>
 
-      <div id="offer">
-        <OfferBanner />
-      </div>
-
       {/* Why we are */}
       <section className="py-16">
         <div className="container-x grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -81,10 +72,9 @@ export default function Home() {
       <section className="bg-cream py-16">
         <div className="container-x">
           <SectionHeading eyebrow="Services" title="We Provide" />
-          <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
-            {services.map((s) => (
-              <ServiceCard key={s.id} service={s} onBookNow={setBookingService} />
-            ))}
+          <CategoryGrid className="mt-12" />
+          <div className="mt-10 text-center">
+            <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
         </div>
       </section>
@@ -173,10 +163,6 @@ export default function Home() {
           <Link to="/contact" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
-
-      {bookingService && (
-        <BookNowModal service={bookingService} onClose={() => setBookingService(null)} />
-      )}
     </div>
   );
 }

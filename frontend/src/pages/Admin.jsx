@@ -111,7 +111,7 @@ export default function Admin() {
       // Storing the real URL means there's never a stale copy to bust.
       const url = await uploadOfferImage(offerFile, setOfferProgress);
       await setDoc(doc(db, "settings", "offerBanner"), { visible: true, url });
-      setOfferStatus({ success: "Offer image updated — it's now live on the homepage." });
+      setOfferStatus({ success: "Offer image updated — it's now live on the Offers page." });
       setOfferFile(null);
       setOfferImageFailed(false);
       setOfferVisible(true);
@@ -127,7 +127,7 @@ export default function Admin() {
     setOfferStatus({ loading: true });
     try {
       await setDoc(doc(db, "settings", "offerBanner"), { visible: false });
-      setOfferStatus({ success: "Offer image removed from the homepage." });
+      setOfferStatus({ success: "Offer image removed from the Offers page." });
       setOfferVisible(false);
     } catch (err) {
       setOfferStatus({ error: err.message });
@@ -212,7 +212,7 @@ export default function Admin() {
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Offer Banner</h2>
         <p className="mb-4 text-sm text-ink/60">
-          Upload an image to show as a promotional banner on the homepage, right below the hero section.
+          Upload an image to show as a promotional banner on the site's Offers page.
         </p>
         <div className="flex flex-col gap-6 rounded-2xl border border-ink/10 p-6 sm:flex-row sm:items-start">
           <div className="flex h-40 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cream sm:w-64">

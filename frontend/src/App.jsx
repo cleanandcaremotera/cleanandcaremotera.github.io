@@ -11,25 +11,15 @@ import Cart from "./pages/Cart.jsx";
 import Contact from "./pages/Contact.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import Home from "./pages/Home.jsx";
+import Offers from "./pages/Offers.jsx";
 import Pricing from "./pages/Pricing.jsx";
 import Services from "./pages/Services.jsx";
 
-// On a plain route change, jump to top. On a route change that carries a
-// hash (e.g. the bottom nav's Offers tab, "/#offer"), scroll that section
-// into view instead — plain browser hash-scroll doesn't fire on client-side
-// SPA navigation, only on a full page load.
 function ScrollToTop() {
-  const { pathname, hash } = useLocation();
+  const { pathname } = useLocation();
   useEffect(() => {
-    if (hash) {
-      const el = document.getElementById(hash.slice(1));
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-        return;
-      }
-    }
     window.scrollTo(0, 0);
-  }, [pathname, hash]);
+  }, [pathname]);
   return null;
 }
 
@@ -45,6 +35,7 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/offers" element={<Offers />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/feedback" element={<Feedback />} />
