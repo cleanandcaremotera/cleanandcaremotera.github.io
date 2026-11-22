@@ -4,8 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./index.css";
 
-// BASE_URL is "/" locally and "/clean-and-care/" on GitHub Pages — React Router
-// needs it without the trailing slash.
+// BASE_URL is "/" everywhere (root-hosted at cleanandcaremotera.github.io) —
+// React Router needs it without the trailing slash.
 const basename = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 ReactDOM.createRoot(document.getElementById("root")).render(

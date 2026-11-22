@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Frontend**: ✅ Live at **https://rbhambhu01.github.io/clean-and-care/**
+- **Frontend**: ✅ Live at **https://cleanandcaremotera.github.io/**
   Deploys automatically via GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main` that touches `frontend/`.
 - **Backend**: Firebase (Firestore + Authentication), free Spark plan. ✅ Live — no separate server to deploy or keep running.
 - **Offer banner image upload**: Cloudinary, free tier. ⬜ Needs one quick setup step below before it's active (everything else works without it).

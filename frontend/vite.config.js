@@ -1,12 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Repo name — GitHub Pages serves project sites from /<repo>/, so the
-// production build needs that as its base path. Local dev stays at "/".
-const REPO_NAME = "clean-and-care";
-
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? `/${REPO_NAME}/` : "/",
+// Hosted at cleanandcaremotera.github.io — a repo named exactly
+// "<account>.github.io" serves at the account's root, not a /<repo>/
+// subpath, so base is "/" in both dev and production.
+export default defineConfig(() => ({
+  base: "/",
   plugins: [react()],
   server: {
     port: 5173,

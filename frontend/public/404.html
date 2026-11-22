@@ -5,12 +5,12 @@
     <title>Clean &amp; Care</title>
     <!--
       GitHub Pages has no server-side router, so a direct hit on e.g.
-      /clean-and-care/pricing 404s. This redirects that into a query string
-      that index.html decodes back into the real path before React Router
+      /pricing 404s. This redirects that into a query string that
+      index.html decodes back into the real path before React Router
       mounts. Standard technique: https://github.com/rafgraph/spa-github-pages
     -->
     <script type="text/javascript">
-      var pathSegmentsToKeep = 1; // "/clean-and-care"
+      var pathSegmentsToKeep = 0; // root site — no /<repo>/ prefix to preserve
       var l = window.location;
       l.replace(
         l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
