@@ -26,15 +26,10 @@ function useHashHighlight() {
   return (id) => (highlighted === id ? "ring-2 ring-lime-dark ring-offset-2" : "");
 }
 
-// `light` flips the label to a pale color for the dark "Schedule a Pickup"
-// panel — the default ink/80 label is invisible against that panel's own
-// ink background, which made every field in it look unlabeled.
-function Field({ label, children, light = false }) {
+function Field({ label, children }) {
   return (
     <label className="block">
-      <span className={`mb-1.5 block text-sm font-medium ${light ? "text-white/80" : "text-ink/80"}`}>
-        {label}
-      </span>
+      <span className="mb-1.5 block text-sm font-medium text-ink/80">{label}</span>
       {children}
     </label>
   );
@@ -190,52 +185,52 @@ export default function Contact() {
 
         <div
           id="pickup-form"
-          className={`space-y-4 rounded-2xl bg-ink p-6 text-white transition-shadow lg:col-span-1 ${highlightClass("pickup-form")}`}
+          className={`space-y-4 rounded-2xl border border-ink/10 p-6 transition-shadow lg:col-span-1 ${highlightClass("pickup-form")}`}
         >
-          <h3 className="font-serif text-xl font-semibold">Schedule a Pickup</h3>
+          <h3 className="font-serif text-xl font-semibold text-ink">Schedule a Pickup</h3>
 
           <Link
             to="/pricing"
-            className="flex items-center justify-between gap-3 rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
+            className="flex items-center justify-between gap-3 rounded-xl bg-cream p-4 transition-colors hover:bg-cream/70"
           >
             <div className="flex items-center gap-3">
-              <ShoppingCart className="h-5 w-5 flex-shrink-0 text-lime" />
+              <ShoppingCart className="h-5 w-5 flex-shrink-0 text-lime-dark" />
               <div>
-                <p className="text-sm font-semibold">Know exactly what you need?</p>
-                <p className="text-xs text-white/60">Pick items &amp; quantities from our price list</p>
+                <p className="text-sm font-semibold text-ink">Know exactly what you need?</p>
+                <p className="text-xs text-ink/60">Pick items &amp; quantities from our price list</p>
               </div>
             </div>
-            <span className="text-lime">&rarr;</span>
+            <span className="text-lime-dark">&rarr;</span>
           </Link>
 
-          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-white/40">
-            <span className="h-px flex-1 bg-white/10" />
+          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-ink/40">
+            <span className="h-px flex-1 bg-ink/10" />
             or just tell us
-            <span className="h-px flex-1 bg-white/10" />
+            <span className="h-px flex-1 bg-ink/10" />
           </div>
 
           <form onSubmit={submitPickup} className="space-y-4">
-          <Field label="Name" light>
+          <Field label="Name">
             <input
               required
-              className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
+              className={inputClass}
               value={pickupForm.name}
               onChange={(e) => setPickupForm({ ...pickupForm, name: e.target.value })}
             />
           </Field>
-          <Field label="Phone" light>
+          <Field label="Phone">
             <input
               required
-              className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
+              className={inputClass}
               value={pickupForm.phone}
               onChange={(e) => setPickupForm({ ...pickupForm, phone: e.target.value })}
             />
           </Field>
           <div>
-            <Field label="Pickup Address" light>
+            <Field label="Pickup Address">
               <input
                 required
-                className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
+                className={inputClass}
                 value={pickupForm.address}
                 onChange={(e) => setPickupForm({ ...pickupForm, address: e.target.value })}
               />
@@ -244,7 +239,7 @@ export default function Contact() {
               type="button"
               onClick={captureLocation}
               disabled={locating}
-              className="mt-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime hover:underline disabled:opacity-50"
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline disabled:opacity-50"
             >
               {location ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
               {locating
@@ -254,33 +249,33 @@ export default function Contact() {
                   : "Share my current location (optional)"}
             </button>
             {location && (
-              <p className="mt-1 text-xs text-white/50">
+              <p className="mt-1 text-xs text-ink/50">
                 Pinned at {location.lat.toFixed(5)}, {location.lng.toFixed(5)} — we&rsquo;ll use this to find you faster.
               </p>
             )}
-            {locationError && <p className="mt-1 text-xs text-red-400">{locationError}</p>}
+            {locationError && <p className="mt-1 text-xs text-red-600">{locationError}</p>}
           </div>
-          <Field label="Service (optional)" light>
+          <Field label="Service (optional)">
             <input
               placeholder="e.g. Dry Cleaning, Wash & Fold"
-              className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
+              className={inputClass}
               value={pickupForm.service}
               onChange={(e) => setPickupForm({ ...pickupForm, service: e.target.value })}
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Preferred Date" light>
+            <Field label="Preferred Date">
               <input
                 type="date"
-                className={`${inputClass} border-white/20 bg-white/5 text-white [color-scheme:dark]`}
+                className={inputClass}
                 value={pickupForm.preferredDate}
                 onChange={(e) => setPickupForm({ ...pickupForm, preferredDate: e.target.value })}
               />
             </Field>
-            <Field label="Preferred Time" light>
+            <Field label="Preferred Time">
               <input
                 type="time"
-                className={`${inputClass} border-white/20 bg-white/5 text-white [color-scheme:dark]`}
+                className={inputClass}
                 value={pickupForm.preferredTime}
                 onChange={(e) => setPickupForm({ ...pickupForm, preferredTime: e.target.value })}
               />
@@ -289,7 +284,7 @@ export default function Contact() {
           <button type="submit" className="btn-pill-lime w-full justify-center">
             Schedule Pickup
           </button>
-          {pickupStatus?.success && <p className="text-sm text-lime">{pickupStatus.success}</p>}
+          {pickupStatus?.success && <p className="text-sm text-lime-dark">{pickupStatus.success}</p>}
           </form>
         </div>
       </section>
