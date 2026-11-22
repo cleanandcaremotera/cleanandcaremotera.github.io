@@ -1,6 +1,7 @@
 import { CheckCircle2, MapPin, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api.js";
+import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendServiceBookingViaWhatsApp } from "../lib/whatsapp.js";
 import LocationPickerModal from "./LocationPickerModal.jsx";
 
@@ -21,6 +22,10 @@ export default function BookNowModal({ service, onClose }) {
 
   function submit(e) {
     e.preventDefault();
+    if (!isValidPhone(form.phone)) {
+      setStatus({ error: "Enter a valid 10-digit mobile number." });
+      return;
+    }
     const payload = {
       serviceName: service.title,
       ...form,
@@ -76,9 +81,14 @@ export default function BookNowModal({ service, onClose }) {
               <span className="mb-1.5 block text-sm font-medium text-ink/80">Phone</span>
               <input
                 required
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                maxLength={10}
+                placeholder="10-digit mobile number"
                 className={inputClass}
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => setForm({ ...form, phone: sanitizePhoneInput(e.target.value) })}
               />
             </label>
             <label className="block">
@@ -120,6 +130,7 @@ export default function BookNowModal({ service, onClose }) {
             <button type="submit" className="btn-pill-lime w-full justify-center">
               Send via WhatsApp
             </button>
+            {status?.error && <p className="text-sm text-red-600">{status.error}</p>}
           </form>
         )}
       </div>

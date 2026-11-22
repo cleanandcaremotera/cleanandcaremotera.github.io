@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { api } from "../api.js";
 import LocationPickerModal from "../components/LocationPickerModal.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
+import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendContactViaWhatsApp, sendPickupViaWhatsApp } from "../lib/whatsapp.js";
 
 // Links like /contact#pickup-form (Schedule Pickup buttons) or
@@ -68,6 +69,10 @@ export default function Contact() {
 
   function submitContact(e) {
     e.preventDefault();
+    if (!isValidPhone(contactForm.phone)) {
+      setContactStatus({ error: "Enter a valid 10-digit mobile number." });
+      return;
+    }
     sendContactViaWhatsApp(contactForm);
     setContactStatus({ success: "Opening WhatsApp — just hit send there to reach us." });
     // Also save to the backend in the background for the admin dashboard record.
@@ -78,6 +83,10 @@ export default function Contact() {
 
   function submitPickup(e) {
     e.preventDefault();
+    if (!isValidPhone(pickupForm.phone)) {
+      setPickupStatus({ error: "Enter a valid 10-digit mobile number." });
+      return;
+    }
     const payload = {
       ...pickupForm,
       ...(location ? { locationUrl: location.url, lat: location.lat, lng: location.lng } : {}),
@@ -135,9 +144,14 @@ export default function Contact() {
           <Field label="Phone">
             <input
               required
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              maxLength={10}
+              placeholder="10-digit mobile number"
               className={inputClass}
               value={contactForm.phone}
-              onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+              onChange={(e) => setContactForm({ ...contactForm, phone: sanitizePhoneInput(e.target.value) })}
             />
           </Field>
           <Field label="Email (optional)">
@@ -160,6 +174,7 @@ export default function Contact() {
             Send Message
           </button>
           {contactStatus?.success && <p className="text-sm text-lime-dark">{contactStatus.success}</p>}
+          {contactStatus?.error && <p className="text-sm text-red-600">{contactStatus.error}</p>}
         </form>
 
         <div
@@ -200,9 +215,14 @@ export default function Contact() {
           <Field label="Phone">
             <input
               required
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              maxLength={10}
+              placeholder="10-digit mobile number"
               className={inputClass}
               value={pickupForm.phone}
-              onChange={(e) => setPickupForm({ ...pickupForm, phone: e.target.value })}
+              onChange={(e) => setPickupForm({ ...pickupForm, phone: sanitizePhoneInput(e.target.value) })}
             />
           </Field>
           <div>
@@ -258,6 +278,7 @@ export default function Contact() {
             Schedule Pickup
           </button>
           {pickupStatus?.success && <p className="text-sm text-lime-dark">{pickupStatus.success}</p>}
+          {pickupStatus?.error && <p className="text-sm text-red-600">{pickupStatus.error}</p>}
           </form>
         </div>
       </section>
