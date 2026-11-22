@@ -1,7 +1,7 @@
 // Business WhatsApp number for the website's "Send Message" / "Schedule Pickup"
 // forms. Indian number, full international format (no "+", no leading 0) as
 // required by wa.me click-to-chat links.
-const WHATSAPP_NUMBER = "919428330909";
+const WHATSAPP_NUMBER = "918160677875";
 
 function openWhatsApp(message) {
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;

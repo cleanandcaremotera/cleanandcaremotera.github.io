@@ -46,7 +46,7 @@ account logins.
 This gives the Worker permission to write to Firestore.
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com),
-   select the `clean-and-care-laundry` project (same one Firebase uses).
+   select the `cleanandcaremotera` project (same one Firebase uses).
 2. **IAM & Admin → Service Accounts → Create Service Account**. Name it
    e.g. `whatsapp-webhook-writer`.
 3. Grant it the role **Cloud Datastore User** (this covers Firestore).
@@ -80,7 +80,7 @@ This gives the Worker permission to write to Firestore.
    - `WHATSAPP_VERIFY_TOKEN` — make up any random string yourself (e.g. a
      long password); you'll enter the same string in Meta's webhook setup
      in step 4.
-   - `FIREBASE_PROJECT_ID` — `clean-and-care-laundry`
+   - `FIREBASE_PROJECT_ID` — `cleanandcaremotera`
    - The rest come from steps 1 and 2 above.
 4. Deploy:
    ```bash

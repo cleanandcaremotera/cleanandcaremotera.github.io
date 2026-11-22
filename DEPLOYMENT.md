@@ -21,16 +21,18 @@ Firebase's free tier solves both: Firestore (database) and Authentication (admin
 
 ## Firebase project
 
-Project ID: `clean-and-care-laundry`. Console: https://console.firebase.google.com/project/clean-and-care-laundry/overview
+Project ID: `cleanandcaremotera`, owned by the business's own Google account (`cleanandcare.moterakoteshwar@...`). Console: https://console.firebase.google.com/project/cleanandcaremotera/overview
+
+This replaces the original `clean-and-care-laundry` project (owned by the personal `rbhambhu01` account) — all content, leads, and feedback were copied over document-for-document and verified. The old project still exists but is no longer used by the live site.
 
 Already set up and live:
-- Firestore database (`nam5` region), seeded with the site's real content via `scripts/seed-firestore.mjs`.
+- Firestore database (`nam5` region), with all content carried over from the original project.
 - Firestore Security Rules (`firestore.rules`) and the composite index it needs (`firestore.indexes.json`), both deployed.
-- Authentication, Email/Password provider enabled, one admin user created (`rbhambhu01@gmail.com`).
+- Authentication, Email/Password provider enabled, same admin login as before (`rbhambhu01@gmail.com`).
 
 If you ever need to redeploy rules or indexes after editing them locally:
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes --project clean-and-care-laundry
+firebase deploy --only firestore:rules,firestore:indexes --project cleanandcaremotera
 ```
 
 ### Re-seeding content
