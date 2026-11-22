@@ -2,6 +2,7 @@ import { CheckCircle2, Mail, MapPin, Phone, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api.js";
+import LocationPickerModal from "../components/LocationPickerModal.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { sendContactViaWhatsApp, sendPickupViaWhatsApp } from "../lib/whatsapp.js";
 
@@ -54,37 +55,15 @@ export default function Contact() {
     preferredTime: "",
   });
   const [pickupStatus, setPickupStatus] = useState(null);
-  const [location, setLocation] = useState(null); // { lat, lng, url } | null
-  const [locationError, setLocationError] = useState("");
-  const [locating, setLocating] = useState(false);
+  const [location, setLocation] = useState(null); // { lat, lng, url, address } | null
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
-  function captureLocation() {
-    if (!navigator.geolocation) {
-      setLocationError("Your browser doesn't support location sharing.");
-      return;
-    }
-    setLocating(true);
-    setLocationError("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLocation({
-          lat: latitude,
-          lng: longitude,
-          url: `https://www.google.com/maps?q=${latitude},${longitude}`,
-        });
-        setLocating(false);
-      },
-      (err) => {
-        setLocationError(
-          err.code === err.PERMISSION_DENIED
-            ? "Location access was denied — you can still type your address above."
-            : "Couldn't get your location — you can still type your address above."
-        );
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  function handleLocationConfirm(loc) {
+    setLocation(loc);
+    setShowLocationPicker(false);
+    // Only auto-fill the typed address if the visitor hasn't written their
+    // own — never overwrite something they already typed.
+    setPickupForm((prev) => (prev.address ? prev : { ...prev, address: loc.address }));
   }
 
   function submitContact(e) {
@@ -237,23 +216,17 @@ export default function Contact() {
             </Field>
             <button
               type="button"
-              onClick={captureLocation}
-              disabled={locating}
-              className="mt-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline disabled:opacity-50"
+              onClick={() => setShowLocationPicker(true)}
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline"
             >
               {location ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-              {locating
-                ? "Getting your location…"
-                : location
-                  ? "Location added — tap to refresh"
-                  : "Share my current location (optional)"}
+              {location ? "Location pinned — tap to change" : "Pin pickup location on map (optional)"}
             </button>
             {location && (
               <p className="mt-1 text-xs text-ink/50">
-                Pinned at {location.lat.toFixed(5)}, {location.lng.toFixed(5)} — we&rsquo;ll use this to find you faster.
+                {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
               </p>
             )}
-            {locationError && <p className="mt-1 text-xs text-red-600">{locationError}</p>}
           </div>
           <Field label="Service (optional)">
             <input
@@ -288,6 +261,13 @@ export default function Contact() {
           </form>
         </div>
       </section>
+
+      {showLocationPicker && (
+        <LocationPickerModal
+          onConfirm={handleLocationConfirm}
+          onClose={() => setShowLocationPicker(false)}
+        />
+      )}
     </div>
   );
 }

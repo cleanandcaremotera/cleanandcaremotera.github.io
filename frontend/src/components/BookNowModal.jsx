@@ -2,6 +2,7 @@ import { CheckCircle2, MapPin, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api.js";
 import { sendServiceBookingViaWhatsApp } from "../lib/whatsapp.js";
+import LocationPickerModal from "./LocationPickerModal.jsx";
 
 const inputClass =
   "w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm outline-none focus:border-lime-dark focus:ring-2 focus:ring-lime/30";
@@ -9,37 +10,13 @@ const inputClass =
 export default function BookNowModal({ service, onClose }) {
   const [form, setForm] = useState({ name: "", phone: "", address: "", message: "" });
   const [status, setStatus] = useState(null);
-  const [location, setLocation] = useState(null); // { lat, lng, url } | null
-  const [locationError, setLocationError] = useState("");
-  const [locating, setLocating] = useState(false);
+  const [location, setLocation] = useState(null); // { lat, lng, url, address } | null
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
-  function captureLocation() {
-    if (!navigator.geolocation) {
-      setLocationError("Your browser doesn't support location sharing.");
-      return;
-    }
-    setLocating(true);
-    setLocationError("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLocation({
-          lat: latitude,
-          lng: longitude,
-          url: `https://www.google.com/maps?q=${latitude},${longitude}`,
-        });
-        setLocating(false);
-      },
-      (err) => {
-        setLocationError(
-          err.code === err.PERMISSION_DENIED
-            ? "Location access was denied — you can still type your address above."
-            : "Couldn't get your location — you can still type your address above."
-        );
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  function handleLocationConfirm(loc) {
+    setLocation(loc);
+    setShowLocationPicker(false);
+    setForm((prev) => (prev.address ? prev : { ...prev, address: loc.address }));
   }
 
   function submit(e) {
@@ -117,27 +94,17 @@ export default function BookNowModal({ service, onClose }) {
             <div>
               <button
                 type="button"
-                onClick={captureLocation}
-                disabled={locating}
-                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline disabled:opacity-50"
+                onClick={() => setShowLocationPicker(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline"
               >
-                {location ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                ) : (
-                  <MapPin className="h-3.5 w-3.5" />
-                )}
-                {locating
-                  ? "Getting your location…"
-                  : location
-                    ? "Location added — tap to refresh"
-                    : "Share my current location (optional)"}
+                {location ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                {location ? "Location pinned — tap to change" : "Pin your location on map (optional)"}
               </button>
               {location && (
                 <p className="mt-1 text-xs text-ink/50">
-                  Pinned at {location.lat.toFixed(5)}, {location.lng.toFixed(5)} — we&rsquo;ll use this to find you faster.
+                  {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
                 </p>
               )}
-              {locationError && <p className="mt-1 text-xs text-red-600">{locationError}</p>}
             </div>
 
             <label className="block">
@@ -156,6 +123,13 @@ export default function BookNowModal({ service, onClose }) {
           </form>
         )}
       </div>
+
+      {showLocationPicker && (
+        <LocationPickerModal
+          onConfirm={handleLocationConfirm}
+          onClose={() => setShowLocationPicker(false)}
+        />
+      )}
     </div>
   );
 }
