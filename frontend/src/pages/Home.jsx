@@ -1,3 +1,4 @@
+import { Award, CalendarClock, Droplets, ShieldCheck, Truck, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -11,6 +12,11 @@ import { img } from "../lib/assets.js";
 function avatarFor(name) {
   return img(`testimonials/${name.toLowerCase().replace(/\s+/g, "-")}.png`);
 }
+
+// One icon per company.about.highlights entry, matched by position (that
+// list's order comes from the seed script and isn't admin-editable, so
+// matching by index is safe).
+const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award];
 
 export default function Home() {
   const { company } = useCompany();
@@ -51,19 +57,32 @@ export default function Home() {
 
       {/* Why we are */}
       <section className="py-16">
-        <div className="container-x grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-          <img
-            src={img("why-choose-wheel.png")}
-            alt="Why choose Clean & Care: quick service, high quality detergent, 100% sanitized, doorstep pickup & drop, on demand service, expert cleaning"
-            className="mx-auto w-full max-w-md"
-          />
-          <div>
-            <p className="eyebrow">Why We Are?</p>
-            <h2 className="text-3xl font-semibold text-ink sm:text-4xl">
-              {company?.about?.whyWeAre?.heading}
-            </h2>
-            <p className="mt-5 line-clamp-3 text-ink/70">{company?.about?.whyWeAre?.body}</p>
-            <Link to="/about" className="btn-pill-lime mt-6">Read More</Link>
+        <div className="container-x">
+          <SectionHeading eyebrow="Why We Are?" title={company?.about?.whyWeAre?.heading} />
+          <p className="mx-auto mt-5 max-w-2xl text-center text-ink/70">
+            {company?.about?.whyWeAre?.body}
+          </p>
+
+          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
+            {(company?.about?.highlights || []).map((h, i) => {
+              const Icon = HIGHLIGHT_ICONS[i] || Zap;
+              return (
+                <div
+                  key={h.title}
+                  className="rounded-2xl border border-ink/10 bg-cream/60 p-5 text-center sm:p-6"
+                >
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-lime/25">
+                    <Icon className="h-6 w-6 text-lime-dark" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold text-ink">{h.title}</h3>
+                  <p className="mt-1.5 text-xs text-ink/60">{h.description}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <Link to="/about" className="btn-pill-lime">Read More</Link>
           </div>
         </div>
       </section>
