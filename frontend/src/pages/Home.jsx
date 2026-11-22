@@ -41,7 +41,7 @@ export default function Home() {
               eco-friendly methods and expert care, every time.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/contact" className="btn-pill-lime">Schedule Pickup</Link>
+              <Link to="/contact#pickup-form" className="btn-pill-lime">Schedule Pickup</Link>
               <Link to="/services" className="btn-pill-outline">Our Services</Link>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function Home() {
             <p className="eyebrow !text-lime">{company?.offer}</p>
             <h3 className="text-3xl font-semibold">{company?.ctaHeading}</h3>
           </div>
-          <Link to="/contact" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
+          <Link to="/contact#pickup-form" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
     </div>

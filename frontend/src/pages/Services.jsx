@@ -83,7 +83,7 @@ export default function Services() {
             <p className="eyebrow !text-lime">2 hr Service Available</p>
             <h3 className="text-3xl font-semibold">Ready when you need it most</h3>
           </div>
-          <Link to="/contact" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
+          <Link to="/contact#pickup-form" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
 

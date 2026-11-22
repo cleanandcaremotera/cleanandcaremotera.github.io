@@ -1,9 +1,30 @@
 import { Mail, MapPin, Phone, ShoppingCart } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../api.js";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { sendContactViaWhatsApp, sendPickupViaWhatsApp } from "../lib/whatsapp.js";
+
+// Links like /contact#pickup-form (Schedule Pickup buttons) or
+// /contact#message-form (Contact Us links) bring the matching form to the
+// front instead of landing on whichever one happens to be on the left.
+function useHashHighlight() {
+  const { hash } = useLocation();
+  const [highlighted, setHighlighted] = useState(null);
+
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.slice(1);
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlighted(id);
+    const timer = setTimeout(() => setHighlighted(null), 2000);
+    return () => clearTimeout(timer);
+  }, [hash]);
+
+  return (id) => (highlighted === id ? "ring-2 ring-lime-dark ring-offset-2" : "");
+}
 
 function Field({ label, children }) {
   return (
@@ -19,6 +40,7 @@ const inputClass =
 
 export default function Contact() {
   const { company } = useCompany();
+  const highlightClass = useHashHighlight();
 
   const [contactForm, setContactForm] = useState({ name: "", phone: "", email: "", message: "" });
   const [contactStatus, setContactStatus] = useState(null);
@@ -73,7 +95,11 @@ export default function Contact() {
           </div>
         </div>
 
-        <form onSubmit={submitContact} className="space-y-4 rounded-2xl border border-ink/10 p-6 lg:col-span-1">
+        <form
+          id="message-form"
+          onSubmit={submitContact}
+          className={`space-y-4 rounded-2xl border border-ink/10 p-6 transition-shadow lg:col-span-1 ${highlightClass("message-form")}`}
+        >
           <h3 className="font-serif text-xl font-semibold text-ink">Send a Message</h3>
           <Field label="Name">
             <input
@@ -113,7 +139,10 @@ export default function Contact() {
           {contactStatus?.success && <p className="text-sm text-lime-dark">{contactStatus.success}</p>}
         </form>
 
-        <div className="space-y-4 rounded-2xl bg-ink p-6 text-white lg:col-span-1">
+        <div
+          id="pickup-form"
+          className={`space-y-4 rounded-2xl bg-ink p-6 text-white transition-shadow lg:col-span-1 ${highlightClass("pickup-form")}`}
+        >
           <h3 className="font-serif text-xl font-semibold">Schedule a Pickup</h3>
 
           <Link
