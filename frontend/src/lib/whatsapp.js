@@ -8,6 +8,12 @@ function openWhatsApp(message) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+// Generic one-tap chat opener for the floating "Contact Us" action — no
+// form data to collect, just starts a conversation.
+export function openWhatsAppChat(message = "Hi, I'd like to know more about your services.") {
+  openWhatsApp(message);
+}
+
 export function sendContactViaWhatsApp({ name, phone, email, message }) {
   const lines = [
     "New message from website:",

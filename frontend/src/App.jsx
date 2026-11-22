@@ -1,6 +1,7 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import BottomNav from "./components/BottomNav.jsx";
+import FloatingActions from "./components/FloatingActions.jsx";
 import Footer from "./components/Footer.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
@@ -21,6 +22,15 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+// Hidden on /admin (not customer-facing) and /contact (its own destination,
+// which already shows both forms on the page).
+const HIDE_FAB_ON = ["/admin", "/contact"];
+function GlobalFloatingActions() {
+  const { pathname } = useLocation();
+  if (HIDE_FAB_ON.includes(pathname)) return null;
+  return <FloatingActions />;
 }
 
 export default function App() {
@@ -48,6 +58,7 @@ export default function App() {
             safe area), not a flat value — notched iPhones need more than 64px. */}
         <div className="lg:hidden" style={{ height: "calc(3.5rem + env(safe-area-inset-bottom))" }} />
         <BottomNav />
+        <GlobalFloatingActions />
       </CartProvider>
     </CompanyProvider>
   );

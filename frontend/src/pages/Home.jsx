@@ -21,11 +21,9 @@ const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award
 export default function Home() {
   const { company } = useCompany();
   const [testimonials, setTestimonials] = useState([]);
-  const [blog, setBlog] = useState([]);
 
   useEffect(() => {
     api.getTestimonials().then(setTestimonials).catch(() => {});
-    api.getBlog().then(setBlog).catch(() => {});
   }, []);
 
   return (
@@ -51,6 +49,17 @@ export default function Home() {
             <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-3xl bg-lime/30 shadow-xl">
               <HeroIllustration className="h-[85%] w-auto" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services */}
+      <section className="bg-cream py-16">
+        <div className="container-x">
+          <SectionHeading eyebrow="Services" title="We Provide" />
+          <CategoryGrid className="mt-12" />
+          <div className="mt-10 text-center">
+            <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
         </div>
       </section>
@@ -83,17 +92,6 @@ export default function Home() {
 
           <div className="mt-10 flex justify-center">
             <Link to="/about" className="btn-pill-lime">Read More</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Services */}
-      <section className="bg-cream py-16">
-        <div className="container-x">
-          <SectionHeading eyebrow="Services" title="We Provide" />
-          <CategoryGrid className="mt-12" />
-          <div className="mt-10 text-center">
-            <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
         </div>
       </section>
@@ -144,33 +142,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Blog */}
-      {blog.length > 0 && (
-        <section className="py-16">
-          <div className="container-x">
-            <SectionHeading eyebrow="Our Latest" title="Blogs" />
-            <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {blog.slice(0, 3).map((post) => (
-                <article key={post.id} className="overflow-hidden rounded-2xl border border-ink/10">
-                  <img
-                    src={img("blog-hanging-shirts.png")}
-                    alt=""
-                    className="h-48 w-full object-cover"
-                  />
-                  <div className="p-5">
-                    <p className="text-xs text-ink/50">
-                      {post.author} &middot; {post.date}
-                    </p>
-                    <h3 className="mt-2 font-serif text-lg font-semibold text-ink">{post.title}</h3>
-                    <p className="mt-2 text-sm text-ink/60">{post.excerpt}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* CTA */}
       <section className="pb-16">
