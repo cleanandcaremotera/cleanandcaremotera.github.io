@@ -47,14 +47,16 @@ export function sendServiceBookingViaWhatsApp({ serviceName, name, phone, addres
   openWhatsApp(lines.join("\n"));
 }
 
-export function sendPickupViaWhatsApp({ name, phone, address, service, preferredDate }) {
+export function sendPickupViaWhatsApp({ name, phone, address, service, preferredDate, preferredTime, locationUrl }) {
   const lines = [
     "New pickup request from website:",
     `Name: ${name}`,
     `Phone: ${phone}`,
     `Address: ${address}`,
+    ...(locationUrl ? [`Location: ${locationUrl}`] : []),
     `Service: ${service || "General Laundry"}`,
     `Preferred Date: ${preferredDate || "Not specified"}`,
+    `Preferred Time: ${preferredTime || "Not specified"}`,
   ];
   openWhatsApp(lines.join("\n"));
 }

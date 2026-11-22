@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone, ShoppingCart } from "lucide-react";
+import { CheckCircle2, Mail, MapPin, Phone, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api.js";
@@ -26,10 +26,15 @@ function useHashHighlight() {
   return (id) => (highlighted === id ? "ring-2 ring-lime-dark ring-offset-2" : "");
 }
 
-function Field({ label, children }) {
+// `light` flips the label to a pale color for the dark "Schedule a Pickup"
+// panel — the default ink/80 label is invisible against that panel's own
+// ink background, which made every field in it look unlabeled.
+function Field({ label, children, light = false }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink/80">{label}</span>
+      <span className={`mb-1.5 block text-sm font-medium ${light ? "text-white/80" : "text-ink/80"}`}>
+        {label}
+      </span>
       {children}
     </label>
   );
@@ -45,8 +50,47 @@ export default function Contact() {
   const [contactForm, setContactForm] = useState({ name: "", phone: "", email: "", message: "" });
   const [contactStatus, setContactStatus] = useState(null);
 
-  const [pickupForm, setPickupForm] = useState({ name: "", phone: "", address: "", service: "", preferredDate: "" });
+  const [pickupForm, setPickupForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    service: "",
+    preferredDate: "",
+    preferredTime: "",
+  });
   const [pickupStatus, setPickupStatus] = useState(null);
+  const [location, setLocation] = useState(null); // { lat, lng, url } | null
+  const [locationError, setLocationError] = useState("");
+  const [locating, setLocating] = useState(false);
+
+  function captureLocation() {
+    if (!navigator.geolocation) {
+      setLocationError("Your browser doesn't support location sharing.");
+      return;
+    }
+    setLocating(true);
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setLocation({
+          lat: latitude,
+          lng: longitude,
+          url: `https://www.google.com/maps?q=${latitude},${longitude}`,
+        });
+        setLocating(false);
+      },
+      (err) => {
+        setLocationError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location access was denied — you can still type your address above."
+            : "Couldn't get your location — you can still type your address above."
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   function submitContact(e) {
     e.preventDefault();
@@ -60,10 +104,15 @@ export default function Contact() {
 
   function submitPickup(e) {
     e.preventDefault();
-    sendPickupViaWhatsApp(pickupForm);
+    const payload = {
+      ...pickupForm,
+      ...(location ? { locationUrl: location.url, lat: location.lat, lng: location.lng } : {}),
+    };
+    sendPickupViaWhatsApp(payload);
     setPickupStatus({ success: "Opening WhatsApp — just hit send there to confirm your pickup." });
-    api.schedulePickup(pickupForm).catch(() => {});
-    setPickupForm({ name: "", phone: "", address: "", service: "", preferredDate: "" });
+    api.schedulePickup(payload).catch(() => {});
+    setPickupForm({ name: "", phone: "", address: "", service: "", preferredDate: "", preferredTime: "" });
+    setLocation(null);
   }
 
   return (
@@ -166,7 +215,7 @@ export default function Contact() {
           </div>
 
           <form onSubmit={submitPickup} className="space-y-4">
-          <Field label="Name">
+          <Field label="Name" light>
             <input
               required
               className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
@@ -174,7 +223,7 @@ export default function Contact() {
               onChange={(e) => setPickupForm({ ...pickupForm, name: e.target.value })}
             />
           </Field>
-          <Field label="Phone">
+          <Field label="Phone" light>
             <input
               required
               className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
@@ -182,15 +231,36 @@ export default function Contact() {
               onChange={(e) => setPickupForm({ ...pickupForm, phone: e.target.value })}
             />
           </Field>
-          <Field label="Pickup Address">
-            <input
-              required
-              className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
-              value={pickupForm.address}
-              onChange={(e) => setPickupForm({ ...pickupForm, address: e.target.value })}
-            />
-          </Field>
-          <Field label="Service">
+          <div>
+            <Field label="Pickup Address" light>
+              <input
+                required
+                className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
+                value={pickupForm.address}
+                onChange={(e) => setPickupForm({ ...pickupForm, address: e.target.value })}
+              />
+            </Field>
+            <button
+              type="button"
+              onClick={captureLocation}
+              disabled={locating}
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime hover:underline disabled:opacity-50"
+            >
+              {location ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+              {locating
+                ? "Getting your location…"
+                : location
+                  ? "Location added — tap to refresh"
+                  : "Share my current location (optional)"}
+            </button>
+            {location && (
+              <p className="mt-1 text-xs text-white/50">
+                Pinned at {location.lat.toFixed(5)}, {location.lng.toFixed(5)} — we&rsquo;ll use this to find you faster.
+              </p>
+            )}
+            {locationError && <p className="mt-1 text-xs text-red-400">{locationError}</p>}
+          </div>
+          <Field label="Service (optional)" light>
             <input
               placeholder="e.g. Dry Cleaning, Wash & Fold"
               className={`${inputClass} border-white/20 bg-white/5 text-white placeholder:text-white/40`}
@@ -198,14 +268,24 @@ export default function Contact() {
               onChange={(e) => setPickupForm({ ...pickupForm, service: e.target.value })}
             />
           </Field>
-          <Field label="Preferred Date">
-            <input
-              type="date"
-              className={`${inputClass} border-white/20 bg-white/5 text-white [color-scheme:dark]`}
-              value={pickupForm.preferredDate}
-              onChange={(e) => setPickupForm({ ...pickupForm, preferredDate: e.target.value })}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Preferred Date" light>
+              <input
+                type="date"
+                className={`${inputClass} border-white/20 bg-white/5 text-white [color-scheme:dark]`}
+                value={pickupForm.preferredDate}
+                onChange={(e) => setPickupForm({ ...pickupForm, preferredDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Preferred Time" light>
+              <input
+                type="time"
+                className={`${inputClass} border-white/20 bg-white/5 text-white [color-scheme:dark]`}
+                value={pickupForm.preferredTime}
+                onChange={(e) => setPickupForm({ ...pickupForm, preferredTime: e.target.value })}
+              />
+            </Field>
+          </div>
           <button type="submit" className="btn-pill-lime w-full justify-center">
             Schedule Pickup
           </button>
