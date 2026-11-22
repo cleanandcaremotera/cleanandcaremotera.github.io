@@ -168,20 +168,10 @@ export default function LocationPickerModal({ onConfirm, onClose }) {
             </ul>
           )}
 
-          <button
-            type="button"
-            onClick={useCurrentLocation}
-            disabled={locating}
-            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline disabled:opacity-50"
-          >
-            {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Crosshair className="h-3.5 w-3.5" />}
-            {locating ? "Getting your location…" : "Use my current location"}
-          </button>
-
           {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
-        <div className="h-72 w-full flex-shrink-0 border-y border-ink/10">
+        <div className="relative h-72 w-full flex-shrink-0 border-y border-ink/10">
           <MapContainer
             center={position || DEFAULT_CENTER}
             zoom={position ? 16 : 12}
@@ -208,12 +198,23 @@ export default function LocationPickerModal({ onConfirm, onClose }) {
               </>
             )}
           </MapContainer>
+
+          <button
+            type="button"
+            onClick={useCurrentLocation}
+            disabled={locating}
+            aria-label="Locate me"
+            title="Locate me"
+            className="absolute bottom-3 right-3 z-[1000] flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-lg ring-1 ring-ink/10 hover:bg-cream disabled:opacity-50"
+          >
+            {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
+          </button>
         </div>
 
         <div className="space-y-3 p-5">
           <p className="min-h-[2.5rem] text-xs text-ink/60">
             {!position
-              ? "Search above, use your current location, or tap the map to drop a pin."
+              ? "Search above, tap the locate-me button on the map, or tap anywhere on the map to drop a pin."
               : resolving
                 ? "Looking up this address…"
                 : address || "Pinned — drag the marker to fine-tune."}
