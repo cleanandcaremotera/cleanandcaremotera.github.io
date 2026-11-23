@@ -9,7 +9,7 @@ const LINKS = [
   { to: "/about", label: "About Us" },
   { to: "/pricing", label: "Pricing" },
   { to: "/offers", label: "Offers" },
-  { to: "/contact#message-form", label: "Contact Us" },
+  { to: "/contact", label: "Contact Us" },
 ];
 
 // Below lg, Home/Pricing already live in the bottom tab bar (BottomNav) —
@@ -52,7 +52,7 @@ export default function Navbar() {
               </span>
             )}
           </NavLink>
-          <NavLink to="/contact#pickup-form" className="btn-pill-lime">
+          <NavLink to="/schedule-pickup" className="btn-pill-lime">
             Schedule Pickup
           </NavLink>
         </div>
@@ -93,7 +93,7 @@ export default function Navbar() {
                 {link.label}
               </NavLink>
             ))}
-            <NavLink to="/contact#pickup-form" className="btn-pill-lime mt-2 justify-center">
+            <NavLink to="/schedule-pickup" className="btn-pill-lime mt-2 justify-center">
               Schedule Pickup
             </NavLink>
           </nav>

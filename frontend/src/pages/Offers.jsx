@@ -36,7 +36,7 @@ export default function Offers() {
               <p className="mt-2 text-sm text-ink/60">
                 Check back soon — or schedule a pickup anyway, we still give it our best.
               </p>
-              <Link to="/contact#pickup-form" className="btn-pill-lime mt-6 inline-block">Schedule Pickup</Link>
+              <Link to="/schedule-pickup" className="btn-pill-lime mt-6 inline-block">Schedule Pickup</Link>
             </div>
           )}
           {offers && offers.length > 0 && <OfferCarousel images={offers} />}

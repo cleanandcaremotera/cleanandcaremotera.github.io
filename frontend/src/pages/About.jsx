@@ -57,7 +57,7 @@ export default function About() {
             <br />
             {company?.address?.line2}
           </p>
-          <Link to="/contact#message-form" className="btn-pill-lime mt-8 inline-flex">
+          <Link to="/contact" className="btn-pill-lime mt-8 inline-flex">
             Get in Touch
           </Link>
         </div>

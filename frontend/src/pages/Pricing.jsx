@@ -290,7 +290,7 @@ export default function Pricing() {
             </p>
             <h3 className="text-3xl font-semibold">Ready to get started?</h3>
           </div>
-          <Link to="/contact#pickup-form" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
+          <Link to="/schedule-pickup" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
     </div>

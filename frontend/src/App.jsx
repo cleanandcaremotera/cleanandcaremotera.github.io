@@ -14,6 +14,7 @@ import Feedback from "./pages/Feedback.jsx";
 import Home from "./pages/Home.jsx";
 import Offers from "./pages/Offers.jsx";
 import Pricing from "./pages/Pricing.jsx";
+import SchedulePickup from "./pages/SchedulePickup.jsx";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -23,9 +24,9 @@ function ScrollToTop() {
   return null;
 }
 
-// Hidden on /admin (not customer-facing) and /contact (its own destination,
-// which already shows both forms on the page).
-const HIDE_FAB_ON = ["/admin", "/contact"];
+// Hidden on /admin (not customer-facing) and on each form's own
+// destination page.
+const HIDE_FAB_ON = ["/admin", "/contact", "/schedule-pickup"];
 function GlobalFloatingActions() {
   const { pathname } = useLocation();
   if (HIDE_FAB_ON.includes(pathname)) return null;
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/offers" element={<Offers />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/schedule-pickup" element={<SchedulePickup />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>

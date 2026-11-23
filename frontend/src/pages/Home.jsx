@@ -202,7 +202,7 @@ export default function Home() {
             <p className="eyebrow !text-lime">{company?.offer}</p>
             <h3 className="text-3xl font-semibold">{company?.ctaHeading}</h3>
           </div>
-          <Link to="/contact#pickup-form" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
+          <Link to="/schedule-pickup" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
 
