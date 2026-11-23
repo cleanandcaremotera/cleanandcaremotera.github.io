@@ -1,19 +1,24 @@
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import OfferCarousel from "../components/OfferCarousel.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { db } from "../lib/firebase.js";
 
 export default function Offers() {
-  const [offer, setOffer] = useState(null); // undefined = loading, null = none active
+  const [offers, setOffers] = useState(undefined); // undefined = loading, [] = none active
 
   useEffect(() => {
     getDoc(doc(db, "settings", "offerBanner"))
       .then((snap) => {
         const data = snap.exists() ? snap.data() : null;
-        setOffer(data?.visible && data?.url ? data.url : null);
+        if (!data?.visible) return setOffers([]);
+        // `urls` is the current shape; `url` is kept as a fallback for any
+        // doc still in the old single-image shape before the admin's next save.
+        const list = data.urls?.length ? data.urls : data.url ? [data.url] : [];
+        setOffers(list);
       })
-      .catch(() => setOffer(null));
+      .catch(() => setOffers([]));
   }, []);
 
   return (
@@ -22,10 +27,10 @@ export default function Offers() {
         <SectionHeading eyebrow="Limited Time" title="Current Offers" />
 
         <div className="mt-12">
-          {offer === undefined && (
+          {offers === undefined && (
             <p className="text-center text-sm text-ink/50">Loading…</p>
           )}
-          {offer === null && (
+          {offers?.length === 0 && (
             <div className="mx-auto max-w-lg rounded-3xl border border-ink/10 bg-cream px-8 py-14 text-center">
               <p className="font-serif text-xl font-semibold text-ink">No active offers right now</p>
               <p className="mt-2 text-sm text-ink/60">
@@ -34,14 +39,7 @@ export default function Offers() {
               <Link to="/contact#pickup-form" className="btn-pill-lime mt-6 inline-block">Schedule Pickup</Link>
             </div>
           )}
-          {offer && (
-            <img
-              src={offer}
-              alt="Current offer"
-              className="mx-auto w-full max-w-4xl rounded-2xl shadow-lg"
-              onError={() => setOffer(null)}
-            />
-          )}
+          {offers && offers.length > 0 && <OfferCarousel images={offers} />}
         </div>
       </div>
     </section>

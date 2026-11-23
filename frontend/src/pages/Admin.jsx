@@ -1,6 +1,6 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { MessageCircle, Star } from "lucide-react";
+import { MessageCircle, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
@@ -76,12 +76,11 @@ export default function Admin() {
   const [bookings, setBookings] = useState([]);
   const [feedback, setFeedback] = useState([]);
 
-  const [offerFile, setOfferFile] = useState(null);
+  const [offerFiles, setOfferFiles] = useState([]);
   const [offerStatus, setOfferStatus] = useState(null);
   const [offerVisible, setOfferVisible] = useState(false);
-  const [offerImageFailed, setOfferImageFailed] = useState(false);
-  const [offerUrl, setOfferUrl] = useState(null);
-  const [offerProgress, setOfferProgress] = useState(0);
+  const [offerUrls, setOfferUrls] = useState([]);
+  const [offerProgress, setOfferProgress] = useState({ index: 0, total: 0, percent: 0 });
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -99,36 +98,51 @@ export default function Admin() {
     signOut(auth);
   }
 
-  async function uploadOffer(e) {
+  async function uploadOffers(e) {
     e.preventDefault();
-    if (!offerFile) return;
+    if (offerFiles.length === 0) return;
     setOfferStatus({ loading: true });
-    setOfferProgress(0);
+    setOfferProgress({ index: 0, total: offerFiles.length, percent: 0 });
     try {
-      // Each upload gets a brand-new Cloudinary URL (see lib/cloudinary.js —
-      // the preset doesn't have Overwrite enabled, so reusing a fixed
-      // public_id silently no-oped and kept serving the original image).
-      // Storing the real URL means there's never a stale copy to bust.
-      const url = await uploadOfferImage(offerFile, setOfferProgress);
-      await setDoc(doc(db, "settings", "offerBanner"), { visible: true, url });
-      setOfferStatus({ success: "Offer image updated — it's now live on the Offers page." });
-      setOfferFile(null);
-      setOfferImageFailed(false);
+      const newUrls = [];
+      for (let i = 0; i < offerFiles.length; i++) {
+        // Each upload gets a brand-new Cloudinary URL (see lib/cloudinary.js —
+        // the preset doesn't have Overwrite enabled, so reusing a fixed
+        // public_id silently no-oped and kept serving the original image).
+        const url = await uploadOfferImage(offerFiles[i], (percent) =>
+          setOfferProgress({ index: i, total: offerFiles.length, percent })
+        );
+        newUrls.push(url);
+      }
+      const urls = [...offerUrls, ...newUrls];
+      await setDoc(doc(db, "settings", "offerBanner"), { visible: true, urls });
+      setOfferStatus({ success: "Offer image(s) added — now live on the Offers page." });
+      setOfferFiles([]);
       setOfferVisible(true);
-      setOfferUrl(url);
+      setOfferUrls(urls);
     } catch (err) {
       setOfferStatus({ error: err.message });
     } finally {
-      setOfferProgress(0);
+      setOfferProgress({ index: 0, total: 0, percent: 0 });
     }
   }
 
-  async function removeOffer() {
-    setOfferStatus({ loading: true });
+  async function removeOfferImage(url) {
+    const urls = offerUrls.filter((u) => u !== url);
+    setOfferUrls(urls);
     try {
-      await setDoc(doc(db, "settings", "offerBanner"), { visible: false });
-      setOfferStatus({ success: "Offer image removed from the Offers page." });
-      setOfferVisible(false);
+      await setDoc(doc(db, "settings", "offerBanner"), { visible: offerVisible, urls });
+    } catch (err) {
+      setOfferStatus({ error: err.message });
+    }
+  }
+
+  async function toggleOfferVisible() {
+    const visible = !offerVisible;
+    setOfferVisible(visible);
+    try {
+      await setDoc(doc(db, "settings", "offerBanner"), { visible, urls: offerUrls });
+      setOfferStatus({ success: visible ? "Offers are now visible on the Offers page." : "Offers hidden from the Offers page." });
     } catch (err) {
       setOfferStatus({ error: err.message });
     }
@@ -162,7 +176,10 @@ export default function Admin() {
 
     getDoc(doc(db, "settings", "offerBanner")).then((snap) => {
       setOfferVisible(snap.exists() && snap.data().visible === true);
-      setOfferUrl(snap.exists() ? snap.data().url || null : null);
+      const data = snap.exists() ? snap.data() : null;
+      // `urls` is the current shape; `url` is a fallback for a doc still in
+      // the old single-image shape, migrated to `urls` on the next save.
+      setOfferUrls(data?.urls?.length ? data.urls : data?.url ? [data.url] : []);
     });
 
     api.getLeadsByType("contact").then(setContacts);
@@ -212,33 +229,39 @@ export default function Admin() {
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Offer Banner</h2>
         <p className="mb-4 text-sm text-ink/60">
-          Upload an image to show as a promotional banner on the site's Offers page.
+          Upload one or more images to show as a slideshow on the site's Offers page.
         </p>
-        <div className="flex flex-col gap-6 rounded-2xl border border-ink/10 p-6 sm:flex-row sm:items-start">
-          <div className="flex h-40 w-full flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cream sm:w-64">
-            {offerUrl && offerVisible && !offerImageFailed ? (
-              <img
-                key={offerUrl}
-                src={offerUrl}
-                alt="Current offer"
-                className="h-full w-full object-cover"
-                onError={() => setOfferImageFailed(true)}
-                onLoad={() => setOfferImageFailed(false)}
-              />
-            ) : (
-              <p className="px-4 text-center text-xs text-ink/40">
-                {!cloudinaryConfigured()
-                  ? "Image hosting not configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)"
-                  : "No offer image set"}
-              </p>
-            )}
-          </div>
+        <div className="rounded-2xl border border-ink/10 p-6">
+          {offerUrls.length > 0 ? (
+            <div className="mb-5 flex flex-wrap gap-3">
+              {offerUrls.map((url) => (
+                <div key={url} className="group relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-cream">
+                  <img src={url} alt="Offer" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeOfferImage(url)}
+                    aria-label="Remove image"
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mb-5 text-xs text-ink/40">
+              {!cloudinaryConfigured()
+                ? "Image hosting not configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)"
+                : "No offer images set"}
+            </p>
+          )}
 
-          <form onSubmit={uploadOffer} className="flex-1 space-y-3">
+          <form onSubmit={uploadOffers} className="space-y-3">
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setOfferFile(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => setOfferFiles(Array.from(e.target.files || []))}
               className="block w-full text-sm text-ink/70 file:mr-4 file:rounded-pill file:border-0 file:bg-cream file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime/30"
             />
             {offerStatus?.loading && (
@@ -246,10 +269,12 @@ export default function Admin() {
                 <div className="h-2 w-full overflow-hidden rounded-pill bg-cream">
                   <div
                     className="h-full rounded-pill bg-lime transition-all"
-                    style={{ width: `${offerProgress}%` }}
+                    style={{ width: `${offerProgress.percent}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-ink/50">Uploading… {offerProgress}%</p>
+                <p className="mt-1 text-xs text-ink/50">
+                  Uploading image {offerProgress.index + 1} of {offerProgress.total}… {offerProgress.percent}%
+                </p>
               </div>
             )}
 
@@ -257,17 +282,17 @@ export default function Admin() {
               <button
                 type="submit"
                 className="btn-pill-lime !py-2 !text-xs"
-                disabled={!offerFile || offerStatus?.loading}
+                disabled={offerFiles.length === 0 || offerStatus?.loading}
               >
-                {offerStatus?.loading ? "Uploading…" : "Upload"}
+                {offerStatus?.loading ? "Uploading…" : offerFiles.length > 1 ? `Upload ${offerFiles.length} Images` : "Upload"}
               </button>
               <button
                 type="button"
-                onClick={removeOffer}
+                onClick={toggleOfferVisible}
                 className="btn-pill-outline !py-2 !text-xs"
-                disabled={!offerVisible || offerStatus?.loading}
+                disabled={offerUrls.length === 0 || offerStatus?.loading}
               >
-                Remove Current Offer
+                {offerVisible ? "Hide From Offers Page" : "Show On Offers Page"}
               </button>
             </div>
             {offerStatus?.success && <p className="text-sm text-lime-dark">{offerStatus.success}</p>}
