@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import CategoryGrid from "../components/CategoryGrid.jsx";
-import HeroIllustration from "../components/HeroIllustration.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StarRating from "../components/StarRating.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
@@ -28,31 +27,6 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="bg-cream">
-        <div className="container-x grid grid-cols-1 items-center gap-10 py-16 lg:grid-cols-2 lg:py-24">
-          <div>
-            <span className="eyebrow bg-lime/20 rounded-pill px-4 py-1.5">India&rsquo;s Leading</span>
-            <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl lg:text-5xl">
-              Laundry and dry-cleaning brand proudly founded by an IITian
-            </h1>
-            <p className="mt-5 max-w-md text-ink/70">
-              {company?.offer || "Flat 10% Off on your first order"} &mdash; doorstep pickup &amp; drop,
-              eco-friendly methods and expert care, every time.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/contact#pickup-form" className="btn-pill-lime">Schedule Pickup</Link>
-              <Link to="/services" className="btn-pill-outline">Our Services</Link>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-3xl bg-lime/30 shadow-xl">
-              <HeroIllustration className="h-[85%] w-auto" />
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Services */}
       <section className="bg-cream py-16">
         <div className="container-x">
