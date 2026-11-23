@@ -2,6 +2,7 @@ import { ArrowLeft, Baby, Footprints, Home as HomeIcon, Percent, Plus, Scale, Sh
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import OfferCarousel from "../components/OfferCarousel.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { img } from "../lib/assets.js";
@@ -175,13 +176,17 @@ const EXTRAS_META = [
 export default function Pricing() {
   const [data, setData] = useState({ categories: [], extras: {} });
   const [discount, setDiscount] = useState(null);
+  const [rateList, setRateList] = useState(null);
   const [params, setParams] = useSearchParams();
   const activeKey = params.get("category");
 
   useEffect(() => {
     api.getPricing().then(setData).catch(() => {});
     api.getDiscount().then(setDiscount).catch(() => {});
+    api.getRateList().then(setRateList).catch(() => {});
   }, []);
+
+  const rateListUrls = rateList?.visible ? rateList.urls || [] : [];
 
   const { categories, extras } = data;
 
@@ -229,6 +234,17 @@ export default function Pricing() {
               Today's offer: <span className="text-lime">{discount.percent}% off</span>
               {discount.label ? ` — ${discount.label}` : ""} — applied automatically at checkout
             </span>
+          </div>
+        </section>
+      )}
+
+      {rateListUrls.length > 0 && !activeTile && (
+        <section className="bg-cream py-16">
+          <div className="container-x">
+            <SectionHeading eyebrow="Our Rates" title="Rate Card" />
+            <div className="mt-12">
+              <OfferCarousel images={rateListUrls} />
+            </div>
           </div>
         </section>
       )}

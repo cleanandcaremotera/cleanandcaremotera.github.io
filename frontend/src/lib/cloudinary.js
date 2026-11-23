@@ -28,14 +28,14 @@ function withTransform(secureUrl) {
 // Cloudinary API: same version/etag on both uploads, "existing": true).
 // A unique name every time sidesteps that entirely and also means there's
 // never a stale cached copy to bust — the URL itself is always new.
-export function uploadOfferImage(file, onProgress) {
+export function uploadImage(file, folder, onProgress) {
   if (!cloudinaryConfigured()) {
     return Promise.reject(
       new Error("Image hosting isn't configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)")
     );
   }
 
-  const publicId = `clean-care/offer-banner-${Date.now()}`;
+  const publicId = `clean-care/${folder}-${Date.now()}`;
   const body = new FormData();
   body.append("file", file);
   body.append("upload_preset", UPLOAD_PRESET);
@@ -68,4 +68,12 @@ export function uploadOfferImage(file, onProgress) {
     xhr.onerror = () => reject(new Error("Upload failed — network error"));
     xhr.send(body);
   });
+}
+
+export function uploadOfferImage(file, onProgress) {
+  return uploadImage(file, "offer-banner", onProgress);
+}
+
+export function uploadRateListImage(file, onProgress) {
+  return uploadImage(file, "rate-list", onProgress);
 }

@@ -1,6 +1,7 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
+import { cloudinaryConfigured, uploadRateListImage } from "../lib/cloudinary.js";
 
 const EXTRAS_LABELS = {
   byWeight: "By Weight Services",
@@ -117,12 +118,22 @@ export default function AdminPricing() {
   const [discountStatus, setDiscountStatus] = useState(null);
   const [openKey, setOpenKey] = useState(null);
 
+  const [rateListUrls, setRateListUrls] = useState([]);
+  const [rateListVisible, setRateListVisible] = useState(false);
+  const [rateListFiles, setRateListFiles] = useState([]);
+  const [rateListStatus, setRateListStatus] = useState(null);
+  const [rateListProgress, setRateListProgress] = useState({ index: 0, total: 0, percent: 0 });
+
   useEffect(() => {
     api.getPricing().then(({ categories, extras }) => {
       setCategories(categories);
       setExtras(extras);
     });
     api.getDiscount().then(setDiscount);
+    api.getRateList().then((data) => {
+      setRateListVisible(data.visible === true);
+      setRateListUrls(data.urls || []);
+    });
   }, []);
 
   async function saveDiscount() {
@@ -132,6 +143,55 @@ export default function AdminPricing() {
       setDiscountStatus({ success: "Discount updated." });
     } catch (err) {
       setDiscountStatus({ error: err.message });
+    }
+  }
+
+  async function uploadRateListImages(e) {
+    e.preventDefault();
+    if (rateListFiles.length === 0) return;
+    setRateListStatus({ loading: true });
+    setRateListProgress({ index: 0, total: rateListFiles.length, percent: 0 });
+    try {
+      const newUrls = [];
+      for (let i = 0; i < rateListFiles.length; i++) {
+        const url = await uploadRateListImage(rateListFiles[i], (percent) =>
+          setRateListProgress({ index: i, total: rateListFiles.length, percent })
+        );
+        newUrls.push(url);
+      }
+      const urls = [...rateListUrls, ...newUrls];
+      await api.updateRateList({ visible: true, urls });
+      setRateListStatus({ success: "Rate list image(s) added — now live on the Pricing page." });
+      setRateListFiles([]);
+      setRateListVisible(true);
+      setRateListUrls(urls);
+    } catch (err) {
+      setRateListStatus({ error: err.message });
+    } finally {
+      setRateListProgress({ index: 0, total: 0, percent: 0 });
+    }
+  }
+
+  async function removeRateListImage(url) {
+    const urls = rateListUrls.filter((u) => u !== url);
+    setRateListUrls(urls);
+    try {
+      await api.updateRateList({ visible: rateListVisible, urls });
+    } catch (err) {
+      setRateListStatus({ error: err.message });
+    }
+  }
+
+  async function toggleRateListVisible() {
+    const visible = !rateListVisible;
+    setRateListVisible(visible);
+    try {
+      await api.updateRateList({ visible, urls: rateListUrls });
+      setRateListStatus({
+        success: visible ? "Rate list is now visible on the Pricing page." : "Rate list hidden from the Pricing page.",
+      });
+    } catch (err) {
+      setRateListStatus({ error: err.message });
     }
   }
 
@@ -181,6 +241,84 @@ export default function AdminPricing() {
         </div>
         {discountStatus?.success && <p className="mt-2 text-xs text-lime-dark">{discountStatus.success}</p>}
         {discountStatus?.error && <p className="mt-2 text-xs text-red-600">{discountStatus.error}</p>}
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-ink/10 p-5">
+        <h3 className="mb-3 font-semibold text-ink">Rate List</h3>
+        <p className="mb-4 text-sm text-ink/60">
+          Upload a photo of your rate card (with any offer already shown on it) to display at the top of the
+          Pricing page, above the category list below.
+        </p>
+
+        {rateListUrls.length > 0 ? (
+          <div className="mb-5 flex flex-wrap gap-3">
+            {rateListUrls.map((url) => (
+              <div key={url} className="group relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-cream">
+                <img src={url} alt="Rate list" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeRateListImage(url)}
+                  aria-label="Remove image"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mb-5 text-xs text-ink/40">
+            {!cloudinaryConfigured()
+              ? "Image hosting not configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)"
+              : "No rate list images set"}
+          </p>
+        )}
+
+        <form onSubmit={uploadRateListImages} className="space-y-3">
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => setRateListFiles(Array.from(e.target.files || []))}
+            className="block w-full text-sm text-ink/70 file:mr-4 file:rounded-pill file:border-0 file:bg-cream file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime/30"
+          />
+          {rateListStatus?.loading && (
+            <div>
+              <div className="h-2 w-full overflow-hidden rounded-pill bg-cream">
+                <div
+                  className="h-full rounded-pill bg-lime transition-all"
+                  style={{ width: `${rateListProgress.percent}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-ink/50">
+                Uploading image {rateListProgress.index + 1} of {rateListProgress.total}… {rateListProgress.percent}%
+              </p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              className="btn-pill-lime !py-1.5 !text-xs"
+              disabled={rateListFiles.length === 0 || rateListStatus?.loading}
+            >
+              {rateListStatus?.loading
+                ? "Uploading…"
+                : rateListFiles.length > 1
+                  ? `Upload ${rateListFiles.length} Images`
+                  : "Upload"}
+            </button>
+            <button
+              type="button"
+              onClick={toggleRateListVisible}
+              className="btn-pill-outline !py-1.5 !text-xs"
+              disabled={rateListUrls.length === 0 || rateListStatus?.loading}
+            >
+              {rateListVisible ? "Hide From Pricing Page" : "Show On Pricing Page"}
+            </button>
+          </div>
+          {rateListStatus?.success && <p className="text-xs text-lime-dark">{rateListStatus.success}</p>}
+          {rateListStatus?.error && <p className="text-xs text-red-600">{rateListStatus.error}</p>}
+        </form>
       </div>
 
       <div className="space-y-3">

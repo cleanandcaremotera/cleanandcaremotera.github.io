@@ -53,6 +53,16 @@ export const api = {
     await setDoc(doc(db, "settings", "discount"), payload);
   },
 
+  async getRateList() {
+    const snap = await getDoc(doc(db, "settings", "rateList"));
+    return snap.exists() ? snap.data() : { visible: false, urls: [] };
+  },
+
+  // Admin-only (Firestore rules require an authenticated user for these).
+  async updateRateList(payload) {
+    await setDoc(doc(db, "settings", "rateList"), payload);
+  },
+
   async updatePricingCategoryItems(id, items) {
     await updateDoc(doc(db, "pricingCategories", id), { items });
   },
