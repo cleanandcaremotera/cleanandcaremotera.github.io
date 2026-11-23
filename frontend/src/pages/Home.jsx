@@ -30,8 +30,7 @@ export default function Home() {
       {/* Services */}
       <section className="bg-cream py-16">
         <div className="container-x">
-          <SectionHeading eyebrow="Services" title="We Provide" />
-          <CategoryGrid className="mt-12" />
+          <CategoryGrid />
           <div className="mt-10 text-center">
             <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
