@@ -32,8 +32,8 @@ export default function OfferCarousel({ images }) {
       <div className="relative overflow-hidden rounded-2xl shadow-lg" ref={emblaRef}>
         <div className="flex">
           {images.map((src, i) => (
-            <div key={src} className="min-w-0 flex-[0_0_100%]">
-              <img src={src} alt={`Current offer ${i + 1}`} className="aspect-[16/9] w-full object-cover" />
+            <div key={src} className="min-w-0 flex-[0_0_100%] bg-cream">
+              <img src={src} alt={`Current offer ${i + 1}`} className="aspect-[16/9] w-full object-contain" />
             </div>
           ))}
         </div>
