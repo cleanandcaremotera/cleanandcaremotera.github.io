@@ -1,10 +1,25 @@
-import { Award, CalendarClock, Droplets, ShieldCheck, Truck, Zap } from "lucide-react";
+import {
+  Armchair,
+  Award,
+  Baby,
+  Briefcase,
+  CalendarClock,
+  Droplets,
+  Flame,
+  Footprints,
+  Home as HomeIcon,
+  ShieldCheck,
+  Shirt,
+  Sparkles,
+  SprayCan,
+  Truck,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import BookNowModal from "../components/BookNowModal.jsx";
 import { CATEGORIES } from "../components/CategoryGrid.jsx";
-import IconBadge from "../components/IconBadge.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StarRating from "../components/StarRating.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
@@ -24,6 +39,20 @@ const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award
 // reuses an existing categories/*.jpg where one already fits the service;
 // bag-cleaning and toy-cleaning had no close match so those two are new
 // sourced photos (see public/images/categories/).
+// Plain icons (no circle backdrop) matching each service's own `icon`
+// field — same look as the /services category tiles, not the white-circle
+// IconBadge treatment used in the category drill-down cards.
+const SERVICE_ICONS = {
+  shirt: Shirt,
+  iron: Flame,
+  home: HomeIcon,
+  sofa: Armchair,
+  shoe: Footprints,
+  briefcase: Briefcase,
+  toy: Baby,
+  spray: SprayCan,
+};
+
 const FEATURED_SERVICES = [
   { slug: "dry-cleaning", photo: "dryclean" },
   { slug: "steam-ironing", photo: "ironing" },
@@ -60,6 +89,7 @@ export default function Home() {
             {featuredServices.map((s) => {
               const overlay =
                 CATEGORIES.find((c) => c.key === s.category)?.overlay || "from-ink/90 via-ink/40";
+              const Icon = SERVICE_ICONS[s.icon] || Sparkles;
               return (
                 <div
                   key={s.id}
@@ -71,9 +101,7 @@ export default function Home() {
                     className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className={`absolute inset-0 bg-gradient-to-t ${overlay} to-transparent`} />
-                  <div className="relative mb-2">
-                    <IconBadge icon={s.icon} slug={s.slug} />
-                  </div>
+                  <Icon className="relative mb-2 h-6 w-6 text-white" strokeWidth={1.75} />
                   <div className="relative">
                     <h3 className="font-serif text-base font-semibold text-white sm:text-lg">{s.title}</h3>
                     <button
