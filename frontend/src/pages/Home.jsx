@@ -2,7 +2,9 @@ import { Award, CalendarClock, Droplets, ShieldCheck, Truck, Zap } from "lucide-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import CategoryGrid from "../components/CategoryGrid.jsx";
+import BookNowModal from "../components/BookNowModal.jsx";
+import { CATEGORIES } from "../components/CategoryGrid.jsx";
+import IconBadge from "../components/IconBadge.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StarRating from "../components/StarRating.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
@@ -17,20 +19,60 @@ function avatarFor(name) {
 // matching by index is safe).
 const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award];
 
+// A curated, explicitly-ordered subset of services (not every service,
+// not grouped by category) — the owner's chosen front-page lineup.
+const FEATURED_SLUGS = [
+  "dry-cleaning",
+  "steam-ironing",
+  "home-cleaning",
+  "sofa-cleaning",
+  "shoes-spa",
+  "bag-cleaning",
+  "toy-cleaning",
+  "home-sanitize",
+];
+
 export default function Home() {
   const { company } = useCompany();
   const [testimonials, setTestimonials] = useState([]);
+  const [services, setServices] = useState([]);
+  const [bookingService, setBookingService] = useState(null);
 
   useEffect(() => {
     api.getTestimonials().then(setTestimonials).catch(() => {});
+    api.getServices().then(setServices).catch(() => {});
   }, []);
+
+  const featuredServices = FEATURED_SLUGS.map((slug) => services.find((s) => s.slug === slug)).filter(Boolean);
 
   return (
     <div>
       {/* Services */}
       <section className="bg-cream py-16">
         <div className="container-x">
-          <CategoryGrid />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
+            {featuredServices.map((s) => {
+              const bg = CATEGORIES.find((c) => c.key === s.category)?.bg || "bg-ink";
+              return (
+                <div
+                  key={s.id}
+                  className={`group relative flex min-h-[200px] flex-col justify-between gap-4 overflow-hidden rounded-3xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${bg}`}
+                >
+                  <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110" />
+                  <IconBadge icon={s.icon} slug={s.slug} />
+                  <div className="relative flex flex-1 flex-col">
+                    <h3 className="font-serif text-base font-semibold text-white sm:text-lg">{s.title}</h3>
+                    <button
+                      onClick={() => setBookingService(s)}
+                      className="relative mt-3 self-start rounded-pill bg-white px-3.5 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-white/90"
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           <div className="mt-10 text-center">
             <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
@@ -126,6 +168,10 @@ export default function Home() {
           <Link to="/contact#pickup-form" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
+
+      {bookingService && (
+        <BookNowModal service={bookingService} onClose={() => setBookingService(null)} />
+      )}
     </div>
   );
 }
