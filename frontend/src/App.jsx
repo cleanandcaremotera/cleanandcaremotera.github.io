@@ -14,7 +14,6 @@ import Feedback from "./pages/Feedback.jsx";
 import Home from "./pages/Home.jsx";
 import Offers from "./pages/Offers.jsx";
 import Pricing from "./pages/Pricing.jsx";
-import Services from "./pages/Services.jsx";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -43,7 +42,6 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
-            <Route path="/services" element={<Services />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/offers" element={<Offers />} />
             <Route path="/cart" element={<Cart />} />

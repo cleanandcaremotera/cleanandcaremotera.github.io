@@ -19,11 +19,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import BookNowModal from "../components/BookNowModal.jsx";
-import { CATEGORIES } from "../components/CategoryGrid.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StarRating from "../components/StarRating.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { img } from "../lib/assets.js";
+import { CATEGORIES } from "../lib/categories.js";
 
 function avatarFor(name) {
   return img(`testimonials/${name.toLowerCase().replace(/\s+/g, "-")}.png`);
@@ -39,9 +39,7 @@ const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award
 // reuses an existing categories/*.jpg where one already fits the service;
 // bag-cleaning and toy-cleaning had no close match so those two are new
 // sourced photos (see public/images/categories/).
-// Plain icons (no circle backdrop) matching each service's own `icon`
-// field — same look as the /services category tiles, not the white-circle
-// IconBadge treatment used in the category drill-down cards.
+// Plain icons (no circle backdrop) matching each service's own `icon` field.
 const SERVICE_ICONS = {
   shirt: Shirt,
   iron: Flame,
@@ -114,9 +112,6 @@ export default function Home() {
                 </div>
               );
             })}
-          </div>
-          <div className="mt-10 text-center">
-            <Link to="/services" className="btn-pill-outline">See All Services</Link>
           </div>
         </div>
       </section>
