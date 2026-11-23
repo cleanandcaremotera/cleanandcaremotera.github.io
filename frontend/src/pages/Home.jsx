@@ -20,16 +20,19 @@ function avatarFor(name) {
 const HIGHLIGHT_ICONS = [Zap, Droplets, ShieldCheck, Truck, CalendarClock, Award];
 
 // A curated, explicitly-ordered subset of services (not every service,
-// not grouped by category) — the owner's chosen front-page lineup.
-const FEATURED_SLUGS = [
-  "dry-cleaning",
-  "steam-ironing",
-  "home-cleaning",
-  "sofa-cleaning",
-  "shoes-spa",
-  "bag-cleaning",
-  "toy-cleaning",
-  "home-sanitize",
+// not grouped by category) — the owner's chosen front-page lineup. `photo`
+// reuses an existing categories/*.jpg where one already fits the service;
+// bag-cleaning and toy-cleaning had no close match so those two are new
+// sourced photos (see public/images/categories/).
+const FEATURED_SERVICES = [
+  { slug: "dry-cleaning", photo: "dryclean" },
+  { slug: "steam-ironing", photo: "ironing" },
+  { slug: "home-cleaning", photo: "home-services" },
+  { slug: "sofa-cleaning", photo: "furniture" },
+  { slug: "shoes-spa", photo: "shoes-spa" },
+  { slug: "bag-cleaning", photo: "bag-cleaning" },
+  { slug: "toy-cleaning", photo: "toy-cleaning" },
+  { slug: "home-sanitize", photo: "sanitization" },
 ];
 
 export default function Home() {
@@ -43,7 +46,10 @@ export default function Home() {
     api.getServices().then(setServices).catch(() => {});
   }, []);
 
-  const featuredServices = FEATURED_SLUGS.map((slug) => services.find((s) => s.slug === slug)).filter(Boolean);
+  const featuredServices = FEATURED_SERVICES.map((f) => {
+    const s = services.find((x) => x.slug === f.slug);
+    return s ? { ...s, photo: f.photo } : null;
+  }).filter(Boolean);
 
   return (
     <div>
@@ -52,15 +58,23 @@ export default function Home() {
         <div className="container-x">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
             {featuredServices.map((s) => {
-              const bg = CATEGORIES.find((c) => c.key === s.category)?.bg || "bg-ink";
+              const overlay =
+                CATEGORIES.find((c) => c.key === s.category)?.overlay || "from-ink/90 via-ink/40";
               return (
                 <div
                   key={s.id}
-                  className={`group relative flex min-h-[200px] flex-col justify-between gap-4 overflow-hidden rounded-3xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${bg}`}
+                  className="group relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-3xl p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
-                  <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110" />
-                  <IconBadge icon={s.icon} slug={s.slug} />
-                  <div className="relative flex flex-1 flex-col">
+                  <img
+                    src={img(`categories/${s.photo}.jpg`)}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${overlay} to-transparent`} />
+                  <div className="relative mb-2">
+                    <IconBadge icon={s.icon} slug={s.slug} />
+                  </div>
+                  <div className="relative">
                     <h3 className="font-serif text-base font-semibold text-white sm:text-lg">{s.title}</h3>
                     <button
                       onClick={() => setBookingService(s)}
