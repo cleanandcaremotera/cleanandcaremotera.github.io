@@ -17,7 +17,8 @@ export default function BookNowModal({ service, onClose }) {
   function handleLocationConfirm(loc) {
     setLocation(loc);
     setShowLocationPicker(false);
-    setForm((prev) => (prev.address ? prev : { ...prev, address: loc.address }));
+    // The geocoded address is never written into the manual field — that's
+    // for details a map pin can't capture (flat/society name).
   }
 
   function submit(e) {
@@ -29,7 +30,9 @@ export default function BookNowModal({ service, onClose }) {
     const payload = {
       serviceName: service.title,
       ...form,
-      ...(location ? { locationUrl: location.url, lat: location.lat, lng: location.lng } : {}),
+      ...(location
+        ? { locationUrl: location.url, lat: location.lat, lng: location.lng, pinnedAddress: location.address }
+        : {}),
     };
     sendServiceBookingViaWhatsApp(payload);
     api.submitServiceBooking(payload).catch(() => {});
@@ -92,9 +95,10 @@ export default function BookNowModal({ service, onClose }) {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-ink/80">Address / Location</span>
+              <span className="mb-1.5 block text-sm font-medium text-ink/80">Flat / Society Name &amp; Number</span>
               <input
                 required
+                placeholder="e.g. Flat 302, Shree Krishna Society"
                 className={inputClass}
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
@@ -112,7 +116,7 @@ export default function BookNowModal({ service, onClose }) {
               </button>
               {location && (
                 <p className="mt-1 text-xs text-ink/50">
-                  {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
+                  Pinned location: {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
                 </p>
               )}
             </div>

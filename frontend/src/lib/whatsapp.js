@@ -35,24 +35,35 @@ export function sendCartOrderViaWhatsApp({ name, phone, address, items, total, d
   openWhatsApp(lines.join("\n"));
 }
 
-export function sendServiceBookingViaWhatsApp({ serviceName, name, phone, address, message, locationUrl }) {
+export function sendServiceBookingViaWhatsApp({ serviceName, name, phone, address, message, locationUrl, pinnedAddress }) {
   const lines = [
     `New booking request — ${serviceName}:`,
     `Name: ${name}`,
     `Phone: ${phone}`,
     `Address: ${address}`,
+    ...(pinnedAddress ? [`Pinned near: ${pinnedAddress}`] : []),
     ...(locationUrl ? [`Location: ${locationUrl}`] : []),
     `Message: ${message || "N/A"}`,
   ];
   openWhatsApp(lines.join("\n"));
 }
 
-export function sendPickupViaWhatsApp({ name, phone, address, service, preferredDate, preferredTime, locationUrl }) {
+export function sendPickupViaWhatsApp({
+  name,
+  phone,
+  address,
+  service,
+  preferredDate,
+  preferredTime,
+  locationUrl,
+  pinnedAddress,
+}) {
   const lines = [
     "New pickup request from website:",
     `Name: ${name}`,
     `Phone: ${phone}`,
     `Address: ${address}`,
+    ...(pinnedAddress ? [`Pinned near: ${pinnedAddress}`] : []),
     ...(locationUrl ? [`Location: ${locationUrl}`] : []),
     `Service: ${service || "General Laundry"}`,
     `Preferred Date: ${preferredDate || "Not specified"}`,

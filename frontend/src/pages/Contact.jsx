@@ -97,9 +97,9 @@ export default function Contact() {
   function handleLocationConfirm(loc) {
     setLocation(loc);
     setShowLocationPicker(false);
-    // Only auto-fill the typed address if the visitor hasn't written their
-    // own — never overwrite something they already typed.
-    setPickupForm((prev) => (prev.address ? prev : { ...prev, address: loc.address }));
+    // The geocoded address is never written into the manual address field —
+    // that field is for details a map pin can't capture (flat/society name),
+    // so it must stay exactly what the visitor typed.
   }
 
   function submitContact(e) {
@@ -124,7 +124,9 @@ export default function Contact() {
     }
     const payload = {
       ...pickupForm,
-      ...(location ? { locationUrl: location.url, lat: location.lat, lng: location.lng } : {}),
+      ...(location
+        ? { locationUrl: location.url, lat: location.lat, lng: location.lng, pinnedAddress: location.address }
+        : {}),
     };
     sendPickupViaWhatsApp(payload);
     setPickupStatus({ success: "Opening WhatsApp — just hit send there to confirm your pickup." });
@@ -215,9 +217,10 @@ export default function Contact() {
               </div>
 
               <div>
-                <IconField label="Pickup Address" icon={MapPin}>
+                <IconField label="Flat / Society Name &amp; Number" icon={MapPin}>
                   <input
                     required
+                    placeholder="e.g. Flat 302, Shree Krishna Society"
                     className={inputClass}
                     value={pickupForm.address}
                     onChange={(e) => setPickupForm({ ...pickupForm, address: e.target.value })}
@@ -233,7 +236,7 @@ export default function Contact() {
                 </button>
                 {location && (
                   <p className="mt-1 text-xs text-ink/50">
-                    {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
+                    Pinned location: {location.address || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`}
                   </p>
                 )}
               </div>
