@@ -1,18 +1,17 @@
-import { Home, LayoutGrid, Percent, Tag } from "lucide-react";
+import { Home, Percent, Tag } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const ITEMS = [
   { to: "/", label: "Home", icon: Home, match: (loc) => loc.pathname === "/" },
-  { to: "/services", label: "Services", icon: LayoutGrid, match: (loc) => loc.pathname === "/services" },
   { to: "/pricing", label: "Pricing", icon: Tag, match: (loc) => loc.pathname === "/pricing" },
   { to: "/offers", label: "Offers", icon: Percent, match: (loc) => loc.pathname === "/offers" },
 ];
 
 // Visible anywhere the Navbar shows its hamburger menu instead of the full
 // desktop nav (lg:hidden, not sm:hidden) — Navbar's mobile dropdown only
-// keeps About/Contact/Cart now, counting on this bar to cover Home/Services/
-// Pricing the rest of the way up to the lg breakpoint. A narrower cutoff
-// here would leave a tablet-width gap where neither nav offers those links.
+// keeps About/Contact/Cart now, counting on this bar to cover Home/Pricing
+// the rest of the way up to the lg breakpoint. A narrower cutoff here
+// would leave a tablet-width gap where neither nav offers those links.
 export default function BottomNav() {
   const location = useLocation();
 

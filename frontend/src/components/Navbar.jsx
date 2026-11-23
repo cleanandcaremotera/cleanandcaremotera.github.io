@@ -7,14 +7,13 @@ import { img } from "../lib/assets.js";
 const LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About Us" },
-  { to: "/services", label: "Services" },
   { to: "/pricing", label: "Pricing" },
   { to: "/offers", label: "Offers" },
   { to: "/contact#message-form", label: "Contact Us" },
 ];
 
-// Below lg, Home/Services/Pricing already live in the bottom tab bar
-// (BottomNav) — no need to repeat them in this dropdown too.
+// Below lg, Home/Pricing already live in the bottom tab bar (BottomNav) —
+// no need to repeat them in this dropdown too.
 const MOBILE_MENU_LINKS = LINKS.filter((l) => l.to === "/about" || l.to.startsWith("/contact"));
 
 export default function Navbar() {
