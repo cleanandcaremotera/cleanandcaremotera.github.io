@@ -90,7 +90,7 @@ const services = [
 const pricingCategories = [
   {
     key: "mens",
-    category: "Men's Dry Cleaning (DC) & Steam Iron (SI)",
+    category: "Men's Wear Dry Clean & Steam Iron",
     items: [
       { item: "Waist Coat/Modi Coat/Sleeveless Coat", dc: 145, si: 55 },
       { item: "Kurta Pajama (Light)", dc: 155, si: 75 },
@@ -118,7 +118,7 @@ const pricingCategories = [
   },
   {
     key: "womens",
-    category: "Women's Services",
+    category: "Women Wear Dry Clean & Steam Iron",
     items: [
       { item: "Blouse/Top", dc: 75, si: 35 },
       { item: "Choli+Lehanga+Dupatta", dc: 585, si: 285 },
@@ -184,7 +184,7 @@ const pricingCategories = [
   },
   {
     key: "kids",
-    category: "Kids Services",
+    category: "Kids Wear Dry Clean & Steam Iron",
     items: [
       { item: "Blouse/Top", dc: 55, si: 25 },
       { item: "Choli+Lehanga+Dupatta", dc: 309, si: 149 },
