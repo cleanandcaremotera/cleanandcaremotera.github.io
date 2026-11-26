@@ -17,6 +17,16 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Single-doc catalog (pricing/main: { categories, extras }) — replacing
+    // pricingCategories/pricingExtras below so the whole catalog can be
+    // bulk-replaced in one write from the admin's Excel import. The two
+    // collections below are kept temporarily so the currently-deployed
+    // frontend keeps working until the new frontend (reading `pricing`
+    // instead) is live; delete them once that's confirmed.
+    match /pricing/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /pricingCategories/{docId} {
       allow read: if true;
       allow write: if isAdmin();

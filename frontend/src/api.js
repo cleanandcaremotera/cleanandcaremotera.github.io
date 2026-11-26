@@ -30,14 +30,19 @@ export const api = {
   getServices: () => getOrdered("services"),
 
   async getPricing() {
-    const [categories, extrasSnap] = await Promise.all([
-      getOrdered("pricingCategories"),
-      getDoc(doc(db, "pricingExtras", "main")),
-    ]);
-    return {
-      categories,
-      extras: extrasSnap.exists() ? extrasSnap.data() : {},
-    };
+    const snap = await getDoc(doc(db, "pricing", "main"));
+    const data = snap.exists() ? snap.data() : {};
+    return { categories: data.categories || [], extras: data.extras || [] };
+  },
+
+  // Admin-only. Overwrites the whole catalog (every category's items, every
+  // extras group) in a single write — used both by the per-row editors in
+  // AdminPricing (which send back the full arrays with just one row
+  // changed) and by the Excel bulk-replace import, which recomputes the
+  // whole thing from the uploaded file including new/removed categories
+  // and groups.
+  async replacePricing({ categories, extras }) {
+    await setDoc(doc(db, "pricing", "main"), { categories, extras });
   },
 
   getTestimonials: () => getOrdered("testimonials"),
@@ -61,14 +66,6 @@ export const api = {
   // Admin-only (Firestore rules require an authenticated user for these).
   async updateRateList(payload) {
     await setDoc(doc(db, "settings", "rateList"), payload);
-  },
-
-  async updatePricingCategoryItems(id, items) {
-    await updateDoc(doc(db, "pricingCategories", id), { items });
-  },
-
-  async updatePricingExtrasGroup(key, rows) {
-    await updateDoc(doc(db, "pricingExtras", "main"), { [key]: rows });
   },
 
   async sendContact(payload) {

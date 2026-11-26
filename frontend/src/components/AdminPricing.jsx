@@ -1,13 +1,8 @@
-import { ChevronDown, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronDown, Download, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { cloudinaryConfigured, uploadRateListImage } from "../lib/cloudinary.js";
-
-const EXTRAS_LABELS = {
-  byWeight: "By Weight Services",
-  shoesSpa: "Shoes Spa",
-  addOns: "Laundry Add-Ons",
-};
+import { exportPricingWorkbook, parsePricingWorkbook } from "../lib/pricingExcel.js";
 
 function CategoryEditor({ category, onSave }) {
   const [items, setItems] = useState(category.items);
@@ -113,7 +108,7 @@ function ExtrasEditor({ rows, onSave }) {
 
 export default function AdminPricing() {
   const [categories, setCategories] = useState([]);
-  const [extras, setExtras] = useState({});
+  const [extras, setExtras] = useState([]);
   const [discount, setDiscount] = useState({ active: false, percent: 0, label: "" });
   const [discountStatus, setDiscountStatus] = useState(null);
   const [openKey, setOpenKey] = useState(null);
@@ -123,6 +118,12 @@ export default function AdminPricing() {
   const [rateListFiles, setRateListFiles] = useState([]);
   const [rateListStatus, setRateListStatus] = useState(null);
   const [rateListProgress, setRateListProgress] = useState({ index: 0, total: 0, percent: 0 });
+
+  // Bulk rate update via Excel: parsing just stages a preview — nothing is
+  // written to Firestore until the admin explicitly confirms the replace.
+  const [pendingImport, setPendingImport] = useState(null);
+  const [importStatus, setImportStatus] = useState(null);
+  const importFileRef = useRef(null);
 
   useEffect(() => {
     api.getPricing().then(({ categories, extras }) => {
@@ -144,6 +145,53 @@ export default function AdminPricing() {
     } catch (err) {
       setDiscountStatus({ error: err.message });
     }
+  }
+
+  function downloadRatesExcel() {
+    exportPricingWorkbook({ categories, extras, discount });
+  }
+
+  async function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingImport(null);
+    setImportStatus({ loading: true });
+    try {
+      const parsed = await parsePricingWorkbook(file);
+      setPendingImport(parsed);
+      const extraLine = parsed.discount ? ` Discount sheet found: ${parsed.discount.active ? "active" : "inactive"}, ${parsed.discount.percent}% off.` : "";
+      setImportStatus({
+        success: `Found ${parsed.categories.length} categories (${parsed.categories.reduce((n, c) => n + c.items.length, 0)} items) and ${parsed.extras.length} extras groups (${parsed.extras.reduce((n, g) => n + g.rows.length, 0)} rows) in the file.${extraLine} Review below, then confirm to replace.`,
+      });
+    } catch (err) {
+      setImportStatus({ error: err.message });
+    } finally {
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
+
+  async function confirmImport() {
+    if (!pendingImport) return;
+    setImportStatus({ loading: true });
+    try {
+      await api.replacePricing({ categories: pendingImport.categories, extras: pendingImport.extras });
+      if (pendingImport.discount) {
+        await api.updateDiscount(pendingImport.discount);
+        setDiscount(pendingImport.discount);
+      }
+      setCategories(pendingImport.categories);
+      setExtras(pendingImport.extras);
+      setPendingImport(null);
+      setOpenKey(null);
+      setImportStatus({ success: "Rates replaced — the Pricing page now reflects the uploaded file." });
+    } catch (err) {
+      setImportStatus({ error: err.message });
+    }
+  }
+
+  function cancelImport() {
+    setPendingImport(null);
+    setImportStatus(null);
   }
 
   async function uploadRateListImages(e) {
@@ -195,8 +243,6 @@ export default function AdminPricing() {
     }
   }
 
-  const extrasKeys = Object.keys(EXTRAS_LABELS).filter((k) => extras?.[k]?.length);
-
   return (
     <section className="mb-12">
       <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Pricing &amp; Discount</h2>
@@ -241,6 +287,53 @@ export default function AdminPricing() {
         </div>
         {discountStatus?.success && <p className="mt-2 text-xs text-lime-dark">{discountStatus.success}</p>}
         {discountStatus?.error && <p className="mt-2 text-xs text-red-600">{discountStatus.error}</p>}
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-ink/10 p-5">
+        <h3 className="mb-3 font-semibold text-ink">Bulk Rate Update (Excel)</h3>
+        <p className="mb-4 text-sm text-ink/60">
+          Download the current rates as an Excel file, edit prices (or add/remove categories, items and extras
+          rows) in a spreadsheet, then upload it here to replace everything at once on the Pricing page.
+        </p>
+
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={downloadRatesExcel} className="btn-pill-outline !py-1.5 !text-xs">
+            <Download className="h-3.5 w-3.5" />
+            Download Current Rates
+          </button>
+          <label className="btn-pill-lime !py-1.5 !text-xs cursor-pointer">
+            <Upload className="h-3.5 w-3.5" />
+            Upload Excel File
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {importStatus?.loading && <p className="mt-3 text-xs text-ink/50">Reading file…</p>}
+        {importStatus?.success && <p className="mt-3 text-xs text-lime-dark">{importStatus.success}</p>}
+        {importStatus?.error && <p className="mt-3 text-xs text-red-600">{importStatus.error}</p>}
+
+        {pendingImport && (
+          <div className="mt-4 rounded-xl border border-lime-dark/30 bg-lime/10 p-4">
+            <p className="mb-3 text-sm font-semibold text-ink">
+              Replace all current rates with this file? This can't be undone (download today's rates first if you
+              want a backup).
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={confirmImport} className="btn-pill-lime !py-1.5 !text-xs">
+                Confirm &amp; Replace All Rates
+              </button>
+              <button onClick={cancelImport} className="btn-pill-outline !py-1.5 !text-xs">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 rounded-2xl border border-ink/10 p-5">
@@ -323,41 +416,43 @@ export default function AdminPricing() {
 
       <div className="space-y-3">
         {categories.map((cat) => (
-          <div key={cat.id} className="rounded-2xl border border-ink/10">
+          <div key={cat.key} className="rounded-2xl border border-ink/10">
             <button
-              onClick={() => setOpenKey(openKey === cat.id ? null : cat.id)}
+              onClick={() => setOpenKey(openKey === cat.key ? null : cat.key)}
               className="flex w-full items-center justify-between p-4 text-left"
             >
               <span className="font-semibold text-ink">{cat.category}</span>
-              <ChevronDown className={`h-4 w-4 flex-shrink-0 text-ink/50 transition-transform ${openKey === cat.id ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 text-ink/50 transition-transform ${openKey === cat.key ? "rotate-180" : ""}`} />
             </button>
-            {openKey === cat.id && (
+            {openKey === cat.key && (
               <CategoryEditor
                 category={cat}
                 onSave={async (items) => {
-                  await api.updatePricingCategoryItems(cat.id, items);
-                  setCategories((prev) => prev.map((c) => (c.id === cat.id ? { ...c, items } : c)));
+                  const updated = categories.map((c) => (c.key === cat.key ? { ...c, items } : c));
+                  await api.replacePricing({ categories: updated, extras });
+                  setCategories(updated);
                 }}
               />
             )}
           </div>
         ))}
 
-        {extrasKeys.map((key) => (
-          <div key={key} className="rounded-2xl border border-ink/10">
+        {extras.map((group) => (
+          <div key={group.key} className="rounded-2xl border border-ink/10">
             <button
-              onClick={() => setOpenKey(openKey === key ? null : key)}
+              onClick={() => setOpenKey(openKey === group.key ? null : group.key)}
               className="flex w-full items-center justify-between p-4 text-left"
             >
-              <span className="font-semibold text-ink">{EXTRAS_LABELS[key]}</span>
-              <ChevronDown className={`h-4 w-4 flex-shrink-0 text-ink/50 transition-transform ${openKey === key ? "rotate-180" : ""}`} />
+              <span className="font-semibold text-ink">{group.label}</span>
+              <ChevronDown className={`h-4 w-4 flex-shrink-0 text-ink/50 transition-transform ${openKey === group.key ? "rotate-180" : ""}`} />
             </button>
-            {openKey === key && (
+            {openKey === group.key && (
               <ExtrasEditor
-                rows={extras[key]}
+                rows={group.rows}
                 onSave={async (rows) => {
-                  await api.updatePricingExtrasGroup(key, rows);
-                  setExtras((prev) => ({ ...prev, [key]: rows }));
+                  const updated = extras.map((g) => (g.key === group.key ? { ...g, rows } : g));
+                  await api.replacePricing({ categories, extras: updated });
+                  setExtras(updated);
                 }}
               />
             )}

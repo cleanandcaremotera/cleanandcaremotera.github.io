@@ -89,6 +89,7 @@ const services = [
 
 const pricingCategories = [
   {
+    key: "mens",
     category: "Men's Dry Cleaning (DC) & Steam Iron (SI)",
     items: [
       { item: "Waist Coat/Modi Coat/Sleeveless Coat", dc: 145, si: 55 },
@@ -116,6 +117,7 @@ const pricingCategories = [
     ],
   },
   {
+    key: "womens",
     category: "Women's Services",
     items: [
       { item: "Blouse/Top", dc: 75, si: 35 },
@@ -141,6 +143,7 @@ const pricingCategories = [
     ],
   },
   {
+    key: "home",
     category: "Home Services",
     items: [
       { item: "Bath Mat", dc: 39, si: null },
@@ -180,6 +183,7 @@ const pricingCategories = [
     ],
   },
   {
+    key: "kids",
     category: "Kids Services",
     items: [
       { item: "Blouse/Top", dc: 55, si: 25 },
@@ -200,28 +204,40 @@ const pricingCategories = [
   },
 ];
 
-const pricingExtras = {
-  addOns: [
-    { service: "Moth Proofing", price: "20/Kg" },
-    { service: "Antiseptic", price: "10/Kg" },
-    { service: "Stain Removal", price: "30/Stain" },
-    { service: "Starch", price: "25/Pcs" },
-    { service: "Softner", price: "5/Kg" },
-    { service: "Extra Soiled", price: "10/Kg" },
-  ],
-  byWeight: [
-    { service: "Wash & Fold", price: "69/Kg" },
-    { service: "Wash & Steam Iron", price: "99/Kg" },
-    { service: "Woollen/Premium Laundry", price: "159/Kg" },
-    { service: "Steam Ironing", price: "20/Pcs" },
-  ],
-  shoesSpa: [
-    { service: "Leather Shoes", price: "349" },
-    { service: "Sports Shoes", price: "249" },
-    { service: "Canvas Shoes", price: "199" },
-    { service: "Boots/Suede Leather Shoes", price: "399" },
-  ],
-};
+const pricingExtras = [
+  {
+    key: "by-weight",
+    label: "By Weight Services",
+    rows: [
+      { service: "Wash & Fold", price: "69/Kg" },
+      { service: "Wash & Steam Iron", price: "99/Kg" },
+      { service: "Woollen/Premium Laundry", price: "159/Kg" },
+      { service: "Steam Ironing", price: "20/Pcs" },
+    ],
+  },
+  {
+    key: "shoes-spa",
+    label: "Shoes Spa",
+    rows: [
+      { service: "Leather Shoes", price: "349" },
+      { service: "Sports Shoes", price: "299" },
+      { service: "Canvas Shoes", price: "199" },
+      { service: "Boots/Suede Leather Shoes", price: "399" },
+    ],
+  },
+  {
+    key: "add-ons",
+    label: "Laundry Add-Ons",
+    rows: [
+      { service: "Moth Proofing", price: "20/Kg" },
+      { service: "Antiseptic", price: "10/Kg" },
+      { service: "Stain Removal", price: "30/Stain" },
+      { service: "Starch", price: "25/Pcs" },
+      { service: "Softner", price: "5/Kg" },
+      { service: "Extra Soiled", price: "10/Kg" },
+    ],
+  },
+];
 
 const testimonials = [
   { id: "1", name: "Raghubansh Singh", rating: 5, text: "First and foremost, their customer service was top-notch. When I called to inquire about their services, the staff was friendly, knowledgeable, and patient in answering all my questions. They made me feel comfortable right from the beginning." },
@@ -249,13 +265,8 @@ async function seed() {
     services.map((s, i) => setDoc(doc(db, "services", s.slug), { ...s, order: i }))
   );
 
-  console.log(`Writing ${pricingCategories.length} pricing categories...`);
-  await Promise.all(
-    pricingCategories.map((c, i) => setDoc(doc(db, "pricingCategories", String(i)), { ...c, order: i }))
-  );
-
-  console.log("Writing pricingExtras/main...");
-  await setDoc(doc(db, "pricingExtras", "main"), pricingExtras);
+  console.log(`Writing pricing/main (${pricingCategories.length} categories, ${pricingExtras.length} extras groups)...`);
+  await setDoc(doc(db, "pricing", "main"), { categories: pricingCategories, extras: pricingExtras });
 
   console.log(`Writing ${testimonials.length} testimonials...`);
   await Promise.all(

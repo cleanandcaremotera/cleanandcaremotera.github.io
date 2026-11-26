@@ -156,10 +156,11 @@ function SimpleTable({ title, rows, labelKey, valueKey }) {
   );
 }
 
-// Styles for the 4 Firestore-driven pricingCategories docs, matched by
-// position (their order is stable — set by the seed script / admin editor,
-// never reordered in the UI). Each has a real photo under a same-hue
-// gradient, same pattern as the Services category grid.
+// Styles cycle by position (modulo), not by name — so categories/extras
+// groups added or renamed via the Excel bulk-replace (see AdminPricing)
+// always get a consistent look instead of needing a style entry per name.
+// Each has a real photo under a same-hue gradient, same pattern as the
+// Services category grid.
 const CATEGORY_STYLES = [
   { Icon: Shirt, bg: "bg-sky-600", photo: "mens", overlay: "from-sky-950/90 via-sky-900/40" },
   { Icon: Sparkles, bg: "bg-rose-600", photo: "womens", overlay: "from-rose-950/90 via-rose-900/40" },
@@ -167,14 +168,14 @@ const CATEGORY_STYLES = [
   { Icon: Baby, bg: "bg-violet-600", photo: "kids", overlay: "from-violet-950/90 via-violet-900/40" },
 ];
 
-const EXTRAS_META = [
-  { key: "byWeight", label: "By Weight Services", Icon: Scale, bg: "bg-emerald-600", photo: "by-weight", overlay: "from-emerald-950/90 via-emerald-900/40" },
-  { key: "shoesSpa", label: "Shoes Spa", Icon: Footprints, bg: "bg-teal-600", photo: "shoes-spa", overlay: "from-teal-950/90 via-teal-900/40" },
-  { key: "addOns", label: "Laundry Add-Ons", Icon: SprayCan, bg: "bg-fuchsia-600", photo: "add-ons", overlay: "from-fuchsia-950/90 via-fuchsia-900/40" },
+const EXTRAS_STYLES = [
+  { Icon: Scale, bg: "bg-emerald-600", photo: "by-weight", overlay: "from-emerald-950/90 via-emerald-900/40" },
+  { Icon: Footprints, bg: "bg-teal-600", photo: "shoes-spa", overlay: "from-teal-950/90 via-teal-900/40" },
+  { Icon: SprayCan, bg: "bg-fuchsia-600", photo: "add-ons", overlay: "from-fuchsia-950/90 via-fuchsia-900/40" },
 ];
 
 export default function Pricing() {
-  const [data, setData] = useState({ categories: [], extras: {} });
+  const [data, setData] = useState({ categories: [], extras: [] });
   const [discount, setDiscount] = useState(null);
   const [rateList, setRateList] = useState(null);
   const [params, setParams] = useSearchParams();
@@ -192,23 +193,20 @@ export default function Pricing() {
 
   const tiles = [
     ...categories.map((c, i) => ({
-      key: c.id,
+      key: c.key,
       label: c.category,
       blurb: "Dry Clean & Steam Iron rates",
       type: "table",
       items: c.items,
       ...(CATEGORY_STYLES[i % CATEGORY_STYLES.length]),
     })),
-    ...EXTRAS_META.filter((m) => extras?.[m.key]?.length).map((m) => ({
-      key: m.key,
-      label: m.label,
-      blurb: `${extras[m.key].length} services`,
+    ...extras.map((g, i) => ({
+      key: g.key,
+      label: g.label,
+      blurb: `${g.rows.length} services`,
       type: "simple",
-      rows: extras[m.key],
-      Icon: m.Icon,
-      bg: m.bg,
-      photo: m.photo,
-      overlay: m.overlay,
+      rows: g.rows,
+      ...(EXTRAS_STYLES[i % EXTRAS_STYLES.length]),
     })),
   ];
 
