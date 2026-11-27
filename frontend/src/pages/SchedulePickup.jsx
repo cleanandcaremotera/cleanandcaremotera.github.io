@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, Clock, MapPin, Phone, Shirt, ShoppingCart, Truck, User } from "lucide-react";
+import { Calendar, CheckCircle2, ChevronDown, Clock, MapPin, Phone, Shirt, ShoppingCart, Truck, User } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -162,9 +162,14 @@ export default function SchedulePickup() {
             </div>
 
             <IconField label="Service" icon={Shirt}>
+              {/* appearance-none strips the native select control — mobile
+                  browsers (iOS Safari especially) render it with different
+                  internal height/padding than a text input, which pushed
+                  the leading icon out of alignment. The chevron below
+                  replaces the native dropdown arrow with a fixed one. */}
               <select
                 required
-                className={inputClass}
+                className={`${inputClass} appearance-none pr-9`}
                 value={pickupForm.service}
                 onChange={(e) => setPickupForm({ ...pickupForm, service: e.target.value })}
               >
@@ -174,6 +179,7 @@ export default function SchedulePickup() {
                   </option>
                 ))}
               </select>
+              <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/35" />
             </IconField>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
