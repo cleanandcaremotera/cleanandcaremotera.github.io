@@ -27,50 +27,57 @@ function RateRow({ label, price, onAdd }) {
   );
 }
 
-// Pick an item from the dropdown, see its Dry Clean / Steam Iron rates,
-// then confirm a quantity before anything actually lands in the cart.
+// Every item/service combo (an item can have a Dry Clean rate, a Steam
+// Iron rate, or both) flattened into one option each — so the dropdown
+// itself is the item *and* service picker, not just the item.
+function buildOptions(items) {
+  return items.flatMap((row) => [
+    row.dc != null
+      ? { key: `${row.item}__dc`, item: row.item, service: "dc", serviceLabel: "Dry Clean", price: row.dc }
+      : null,
+    row.si != null
+      ? { key: `${row.item}__si`, item: row.item, service: "si", serviceLabel: "Steam Iron", price: row.si }
+      : null,
+  ].filter(Boolean));
+}
+
+// Pick an item + service in one dropdown, see its rate, then confirm a
+// quantity before anything actually lands in the cart.
 function PriceTable({ title, items }) {
   const { addItem } = useCart();
-  const [selected, setSelected] = useState(items[0]?.item || "");
+  const options = buildOptions(items);
+  const [selectedKey, setSelectedKey] = useState(options[0]?.key || "");
   const [pendingAdd, setPendingAdd] = useState(null); // { item, service, price } | null
 
   useEffect(() => {
-    setSelected(items[0]?.item || "");
+    setSelectedKey(options[0]?.key || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  const row = items.find((r) => r.item === selected);
+  const selected = options.find((o) => o.key === selectedKey);
 
   return (
     <div>
       {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
 
       <label className="block">
-        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose an item</span>
-        <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClass}>
-          {items.map((r) => (
-            <option key={r.item} value={r.item}>
-              {r.item}
+        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose an item &amp; service</span>
+        <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)} className={selectClass}>
+          {options.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.item} &mdash; {o.serviceLabel} (&#8377;{o.price})
             </option>
           ))}
         </select>
       </label>
 
-      {row && (
+      {selected && (
         <div className="mt-4 overflow-hidden rounded-2xl border border-ink/10">
-          {row.dc != null && (
-            <RateRow
-              label="Dry Clean"
-              price={row.dc}
-              onAdd={() => setPendingAdd({ item: row.item, service: "dc", price: row.dc })}
-            />
-          )}
-          {row.si != null && (
-            <RateRow
-              label="Steam Iron"
-              price={row.si}
-              onAdd={() => setPendingAdd({ item: row.item, service: "si", price: row.si })}
-            />
-          )}
+          <RateRow
+            label={selected.serviceLabel}
+            price={selected.price}
+            onAdd={() => setPendingAdd({ item: selected.item, service: selected.service, price: selected.price })}
+          />
         </div>
       )}
 
