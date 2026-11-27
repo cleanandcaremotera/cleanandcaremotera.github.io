@@ -203,14 +203,16 @@ export default function Admin() {
     if (activeTab === "contact") markSeenIfNeeded(contacts, setContacts, api.markLeadsSeen);
     else if (activeTab === "cart") markSeenIfNeeded(cartOrders, setCartOrders, api.markLeadsSeen);
     else if (activeTab === "service") markSeenIfNeeded(bookings, setBookings, api.markLeadsSeen);
+    else if (activeTab === "pickup") markSeenIfNeeded(pickups, setPickups, api.markLeadsSeen);
     else if (activeTab === "feedback") markSeenIfNeeded(feedback, setFeedback, api.markFeedbackSeen);
-  }, [activeTab, user, contacts, cartOrders, bookings, feedback]);
+  }, [activeTab, user, contacts, cartOrders, bookings, pickups, feedback]);
 
   const unreadByTab = {
     whatsapp: whatsappMessages.filter((m) => !m.read).length,
     contact: contacts.filter((c) => c.seen === false).length,
     cart: cartOrders.filter((o) => o.seen === false).length,
     service: bookings.filter((b) => b.seen === false).length,
+    pickup: pickups.filter((p) => p.seen === false).length,
     feedback: feedback.filter((f) => f.seen === false).length,
   };
 

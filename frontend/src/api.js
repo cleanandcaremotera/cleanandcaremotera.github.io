@@ -95,6 +95,7 @@ export const api = {
       type: "pickup",
       ...payload,
       status: "pending",
+      seen: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Pickup scheduled! Our team will confirm shortly." };
