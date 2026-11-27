@@ -27,71 +27,121 @@ function RateRow({ label, price, onAdd }) {
   );
 }
 
-// Every item/service combo (an item can have a Dry Clean rate, a Steam
-// Iron rate, or both) flattened into one option each — so the dropdown
-// itself is the item *and* service picker, not just the item.
-function buildOptions(items) {
-  return items.flatMap((row) => [
-    row.dc != null
-      ? { key: `${row.item}__dc`, item: row.item, service: "dc", serviceLabel: "Dry Clean", price: row.dc }
-      : null,
-    row.si != null
-      ? { key: `${row.item}__si`, item: row.item, service: "si", serviceLabel: "Steam Iron", price: row.si }
-      : null,
-  ].filter(Boolean));
+// A rate the admin can tap repeatedly to build up a quantity before
+// committing anything to the cart — a small circular badge on the corner
+// shows the running count; tapping the badge itself removes one.
+function RateChip({ label, price, qty, onAdd, onRemove }) {
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={onAdd}
+        className={`flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium transition-colors ${
+          qty > 0 ? "border-lime-dark bg-lime/15 text-ink" : "border-ink/15 text-ink/70 hover:bg-cream"
+        }`}
+      >
+        {label} &#8377;{price}
+      </button>
+      {qty > 0 && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove one ${label} — ${qty} selected`}
+          title="Tap to remove one"
+          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-lime-dark text-[11px] font-bold text-white shadow"
+        >
+          {qty}
+        </button>
+      )}
+    </div>
+  );
 }
 
-// Pick an item + service in one dropdown, see its rate, then confirm a
-// quantity before anything actually lands in the cart.
+function keyFor(item, service) {
+  return `${item}__${service}`;
+}
+
+// Tap a rate to add one (the badge on its corner tracks the running
+// count — tap the badge to remove one), browse and tap as many
+// items/services as needed, then one "Add to Cart" commits everything
+// at once instead of confirming each item separately.
 function PriceTable({ title, items }) {
   const { addItem } = useCart();
-  const options = buildOptions(items);
-  const [selectedKey, setSelectedKey] = useState(options[0]?.key || "");
-  const [pendingAdd, setPendingAdd] = useState(null); // { item, service, price } | null
+  const [qtyByKey, setQtyByKey] = useState({});
 
   useEffect(() => {
-    setSelectedKey(options[0]?.key || "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setQtyByKey({});
   }, [items]);
 
-  const selected = options.find((o) => o.key === selectedKey);
+  function bump(item, service, delta) {
+    const key = keyFor(item, service);
+    setQtyByKey((prev) => {
+      const next = Math.max(0, (prev[key] || 0) + delta);
+      return { ...prev, [key]: next };
+    });
+  }
+
+  const totalSelected = Object.values(qtyByKey).reduce((sum, q) => sum + q, 0);
+  const totalPrice = items.reduce((sum, row) => {
+    const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
+    const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
+    return sum + dcQty * (row.dc || 0) + siQty * (row.si || 0);
+  }, 0);
+
+  function handleAddToCart() {
+    items.forEach((row) => {
+      const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
+      if (dcQty > 0) addItem({ item: row.item, service: "dc", price: row.dc, qty: dcQty });
+      const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
+      if (siQty > 0) addItem({ item: row.item, service: "si", price: row.si, qty: siQty });
+    });
+    setQtyByKey({});
+  }
 
   return (
     <div>
       {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
 
-      <label className="block">
-        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose an item &amp; service</span>
-        <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)} className={selectClass}>
-          {options.map((o) => (
-            <option key={o.key} value={o.key}>
-              {o.item} &mdash; {o.serviceLabel} (&#8377;{o.price})
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="space-y-3">
+        {items.map((row) => (
+          <div
+            key={row.item}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 p-4"
+          >
+            <p className="font-medium text-ink">{row.item}</p>
+            <div className="flex flex-wrap gap-3">
+              {row.dc != null && (
+                <RateChip
+                  label="Dry Clean"
+                  price={row.dc}
+                  qty={qtyByKey[keyFor(row.item, "dc")] || 0}
+                  onAdd={() => bump(row.item, "dc", 1)}
+                  onRemove={() => bump(row.item, "dc", -1)}
+                />
+              )}
+              {row.si != null && (
+                <RateChip
+                  label="Steam Iron"
+                  price={row.si}
+                  qty={qtyByKey[keyFor(row.item, "si")] || 0}
+                  onAdd={() => bump(row.item, "si", 1)}
+                  onRemove={() => bump(row.item, "si", -1)}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {selected && (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-ink/10">
-          <RateRow
-            label={selected.serviceLabel}
-            price={selected.price}
-            onAdd={() => setPendingAdd({ item: selected.item, service: selected.service, price: selected.price })}
-          />
+      {totalSelected > 0 && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-ink px-6 py-4 text-white">
+          <p className="text-sm font-medium">
+            {totalSelected} item{totalSelected > 1 ? "s" : ""} selected &middot; &#8377;{totalPrice}
+          </p>
+          <button onClick={handleAddToCart} className="btn-pill-lime !py-2 !text-xs">
+            <Plus className="h-3.5 w-3.5" /> Add to Cart
+          </button>
         </div>
-      )}
-
-      {pendingAdd && (
-        <QtyPromptModal
-          item={pendingAdd.item}
-          serviceLabel={pendingAdd.service === "dc" ? "Dry Clean" : "Steam Iron"}
-          price={pendingAdd.price}
-          onConfirm={(qty) => {
-            addItem({ ...pendingAdd, qty });
-            setPendingAdd(null);
-          }}
-          onCancel={() => setPendingAdd(null)}
-        />
       )}
     </div>
   );
