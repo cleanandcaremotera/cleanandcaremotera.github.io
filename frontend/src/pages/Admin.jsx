@@ -87,6 +87,8 @@ export default function Admin() {
   const [cartOrders, setCartOrders] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [feedback, setFeedback] = useState([]);
+  const [whatsappMessages, setWhatsappMessages] = useState([]);
+  const [whatsappLoading, setWhatsappLoading] = useState(true);
 
   const [offerFiles, setOfferFiles] = useState([]);
   const [offerStatus, setOfferStatus] = useState(null);
@@ -183,6 +185,44 @@ export default function Admin() {
   const updateCartStatus = makeStatusHandler(setCartOrders);
   const updateBookingStatus = makeStatusHandler(setBookings);
 
+  // Clears a tab's unread badge by batch-marking any `seen: false` docs in
+  // that list as seen, the moment the admin actually opens that tab.
+  async function markSeenIfNeeded(list, setList, markFn) {
+    const unseenIds = list.filter((d) => d.seen === false).map((d) => d.id);
+    if (unseenIds.length === 0) return;
+    setList((prev) => prev.map((d) => (unseenIds.includes(d.id) ? { ...d, seen: true } : d)));
+    try {
+      await markFn(unseenIds);
+    } catch {
+      // Not critical — the badge will just reappear until the next retry.
+    }
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    if (activeTab === "contact") markSeenIfNeeded(contacts, setContacts, api.markLeadsSeen);
+    else if (activeTab === "cart") markSeenIfNeeded(cartOrders, setCartOrders, api.markLeadsSeen);
+    else if (activeTab === "service") markSeenIfNeeded(bookings, setBookings, api.markLeadsSeen);
+    else if (activeTab === "feedback") markSeenIfNeeded(feedback, setFeedback, api.markFeedbackSeen);
+  }, [activeTab, user, contacts, cartOrders, bookings, feedback]);
+
+  const unreadByTab = {
+    whatsapp: whatsappMessages.filter((m) => !m.read).length,
+    contact: contacts.filter((c) => c.seen === false).length,
+    cart: cartOrders.filter((o) => o.seen === false).length,
+    service: bookings.filter((b) => b.seen === false).length,
+    feedback: feedback.filter((f) => f.seen === false).length,
+  };
+
+  async function toggleWhatsAppRead(id, read) {
+    setWhatsappMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read } : m)));
+    try {
+      await api.markWhatsAppMessageRead(id, read);
+    } catch {
+      // Not critical — admin can just retry the toggle.
+    }
+  }
+
   function notifyCustomer(type, lead) {
     const label = leadServiceLabel(type, lead);
     const feedbackUrl = `${window.location.origin}${import.meta.env.BASE_URL}feedback?lead=${lead.id}&service=${encodeURIComponent(label)}`;
@@ -205,6 +245,7 @@ export default function Admin() {
     api.getLeadsByType("cart").then(setCartOrders);
     api.getLeadsByType("service").then(setBookings);
     api.getFeedback().then(setFeedback);
+    api.getWhatsAppMessages().then(setWhatsappMessages).catch(() => {}).finally(() => setWhatsappLoading(false));
   }, [user]);
 
   if (user === undefined) {
@@ -251,20 +292,28 @@ export default function Admin() {
       </div>
 
       <div className="mb-10 flex gap-2 overflow-x-auto border-b border-ink/10 pb-px">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setActiveTab(t.id)}
-            className={`flex-shrink-0 whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-              activeTab === t.id
-                ? "border-b-2 border-lime-dark bg-cream text-ink"
-                : "border-b-2 border-transparent text-ink/50 hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const unread = unreadByTab[t.id] || 0;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                activeTab === t.id
+                  ? "border-b-2 border-lime-dark bg-cream text-ink"
+                  : "border-b-2 border-transparent text-ink/50 hover:text-ink"
+              }`}
+            >
+              {t.label}
+              {unread > 0 && (
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
+                  {unread}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {activeTab === "offer" && (
@@ -344,7 +393,9 @@ export default function Admin() {
       </section>
       )}
 
-      {activeTab === "whatsapp" && <AdminWhatsAppInbox />}
+      {activeTab === "whatsapp" && (
+        <AdminWhatsAppInbox messages={whatsappMessages} loading={whatsappLoading} onToggleRead={toggleWhatsAppRead} />
+      )}
 
       {activeTab === "pricing" && <AdminPricing />}
 

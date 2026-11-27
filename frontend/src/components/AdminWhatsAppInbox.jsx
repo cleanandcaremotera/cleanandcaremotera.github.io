@@ -1,6 +1,4 @@
 import { MessageCircleMore } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api } from "../api.js";
 
 function formatTime(ts) {
   if (!ts?.toDate) return "";
@@ -16,23 +14,10 @@ function replyLink(phone) {
   return `https://wa.me/${digits}`;
 }
 
-export default function AdminWhatsAppInbox() {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.getWhatsAppMessages().then(setMessages).catch(() => {}).finally(() => setLoading(false));
-  }, []);
-
-  async function toggleRead(id, read) {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read } : m)));
-    try {
-      await api.markWhatsAppMessageRead(id, read);
-    } catch {
-      // Not critical — admin can just retry the toggle.
-    }
-  }
-
+// Messages (and their unread count) live in the parent Admin page now, so
+// the tab bar can show an accurate badge without this inbox being mounted
+// first — this component just renders what it's given.
+export default function AdminWhatsAppInbox({ messages, loading, onToggleRead }) {
   const unreadCount = messages.filter((m) => !m.read).length;
 
   return (
@@ -58,7 +43,7 @@ export default function AdminWhatsAppInbox() {
             <div className="flex items-start justify-between gap-3">
               <p className="font-medium text-ink">{m.from}</p>
               <button
-                onClick={() => toggleRead(m.id, !m.read)}
+                onClick={() => onToggleRead(m.id, !m.read)}
                 className={`rounded-pill px-2.5 py-1 text-xs font-medium ${m.read ? "bg-cream text-ink/60" : "bg-lime text-ink"}`}
               >
                 {m.read ? "Read" : "Mark read"}
@@ -103,7 +88,7 @@ export default function AdminWhatsAppInbox() {
                 <td className="px-4 py-2.5 text-ink/60">{formatTime(m.createdAt)}</td>
                 <td className="px-4 py-2.5">
                   <button
-                    onClick={() => toggleRead(m.id, !m.read)}
+                    onClick={() => onToggleRead(m.id, !m.read)}
                     className={`rounded-pill px-2.5 py-1 text-xs font-medium ${m.read ? "bg-cream text-ink/60" : "bg-lime text-ink"}`}
                   >
                     {m.read ? "Read" : "Mark read"}

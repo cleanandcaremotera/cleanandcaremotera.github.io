@@ -10,6 +10,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./lib/firebase.js";
 
@@ -19,6 +20,16 @@ async function getOrdered(collectionName) {
   const q = query(collection(db, collectionName), orderBy("order"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// `seen` only exists on docs created after this feature shipped — older
+// docs are left without the field so they never retroactively count as
+// unread. Cleared in one batch write when the admin opens the matching tab.
+async function markSeen(collectionName, ids) {
+  if (ids.length === 0) return;
+  const batch = writeBatch(db);
+  ids.forEach((id) => batch.update(doc(db, collectionName, id), { seen: true }));
+  await batch.commit();
 }
 
 export const api = {
@@ -73,6 +84,7 @@ export const api = {
       type: "contact",
       ...payload,
       status: "new",
+      seen: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Thanks! We'll get back to you shortly." };
@@ -93,6 +105,7 @@ export const api = {
       type: "cart",
       ...payload,
       status: "pending",
+      seen: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Order received! Confirm it on WhatsApp to finish." };
@@ -103,6 +116,7 @@ export const api = {
       type: "service",
       ...payload,
       status: "pending",
+      seen: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Booking request sent! Confirm it on WhatsApp to finish." };
@@ -119,8 +133,13 @@ export const api = {
     await updateDoc(doc(db, "leads", id), { status });
   },
 
+  // Admin-only. Batch-clears the "unread" badge for a lead type's tab.
+  async markLeadsSeen(ids) {
+    await markSeen("leads", ids);
+  },
+
   async submitFeedback(payload) {
-    await addDoc(collection(db, "feedback"), { ...payload, createdAt: serverTimestamp() });
+    await addDoc(collection(db, "feedback"), { ...payload, seen: false, createdAt: serverTimestamp() });
   },
 
   // Admin-only (Firestore rules require an authenticated user for this).
@@ -128,6 +147,10 @@ export const api = {
     const q = query(collection(db, "feedback"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
+  async markFeedbackSeen(ids) {
+    await markSeen("feedback", ids);
   },
 
   // Admin-only. Written server-side by the Cloudflare Worker webhook
