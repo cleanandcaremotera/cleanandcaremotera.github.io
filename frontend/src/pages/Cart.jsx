@@ -1,4 +1,4 @@
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Info, Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -177,6 +177,16 @@ export default function Cart() {
               Checkout via WhatsApp
             </button>
           </form>
+        </div>
+      )}
+
+      {!status?.success && (
+        <div className="mt-8 flex items-start gap-2.5 rounded-xl bg-cream px-4 py-3 text-sm text-ink/60">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-ink/40" />
+          <p>
+            This website is for placing orders only. Payment is collected in person at the time of
+            pickup or delivery of your items.
+          </p>
         </div>
       )}
     </div>
