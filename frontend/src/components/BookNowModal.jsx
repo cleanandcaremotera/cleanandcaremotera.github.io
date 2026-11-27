@@ -1,9 +1,14 @@
 import { CheckCircle2, MapPin, X } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { api } from "../api.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendServiceBookingViaWhatsApp } from "../lib/whatsapp.js";
-import LocationPickerModal from "./LocationPickerModal.jsx";
+import MapLoadingOverlay from "./MapLoadingOverlay.jsx";
+
+// Leaflet + react-leaflet are a meaningful chunk on their own — only loaded
+// once a visitor actually taps "Pin Your Location on Map", not on every page
+// that happens to render this modal's trigger button.
+const LocationPickerModal = lazy(() => import("./LocationPickerModal.jsx"));
 
 const inputClass =
   "w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm outline-none focus:border-lime-dark focus:ring-2 focus:ring-lime/30";
@@ -146,10 +151,12 @@ export default function BookNowModal({ service, onClose }) {
       </div>
 
       {showLocationPicker && (
-        <LocationPickerModal
-          onConfirm={handleLocationConfirm}
-          onClose={() => setShowLocationPicker(false)}
-        />
+        <Suspense fallback={<MapLoadingOverlay />}>
+          <LocationPickerModal
+            onConfirm={handleLocationConfirm}
+            onClose={() => setShowLocationPicker(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

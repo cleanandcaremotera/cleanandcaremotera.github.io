@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import BottomNav from "./components/BottomNav.jsx";
 import FloatingActions from "./components/FloatingActions.jsx";
 import Footer from "./components/Footer.jsx";
@@ -8,7 +8,6 @@ import { CartProvider } from "./context/CartContext.jsx";
 import { CompanyProvider } from "./context/CompanyContext.jsx";
 import { trackVisit } from "./lib/analytics.js";
 import About from "./pages/About.jsx";
-import Admin from "./pages/Admin.jsx";
 import Cart from "./pages/Cart.jsx";
 import Contact from "./pages/Contact.jsx";
 import Feedback from "./pages/Feedback.jsx";
@@ -16,6 +15,19 @@ import Home from "./pages/Home.jsx";
 import Offers from "./pages/Offers.jsx";
 import Pricing from "./pages/Pricing.jsx";
 import SchedulePickup from "./pages/SchedulePickup.jsx";
+
+// The admin dashboard (and everything only it needs — the Excel import/
+// export library, the WhatsApp inbox, the pricing editor) is split into its
+// own chunk and only downloaded when someone actually visits /admin, so a
+// first-time customer loading the homepage isn't also fetching code they'll
+// never use.
+const Admin = lazy(() => import("./pages/Admin.jsx"));
+
+const PageLoading = () => (
+  <div className="flex min-h-screen items-center justify-center bg-cream-light text-center text-ink/50">
+    Loading…
+  </div>
+);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -62,17 +74,19 @@ export default function App() {
         <VisitTracker />
         {!isAdmin && <Navbar />}
         <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/offers" element={<Offers />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/schedule-pickup" element={<SchedulePickup />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/admin" element={<Admin />} />
-          </Routes>
+          <Suspense fallback={<PageLoading />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/offers" element={<Offers />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/schedule-pickup" element={<SchedulePickup />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/admin" element={<Admin />} />
+            </Routes>
+          </Suspense>
         </main>
         {!isAdmin && <Footer />}
         {!isAdmin && (

@@ -1,13 +1,18 @@
 import { Calendar, CheckCircle2, ChevronDown, Clock, MapPin, Phone, Shirt, ShoppingCart, Truck, User } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { ContactInfoSidebar, FormHeader, IconField, inputClass } from "../components/FormParts.jsx";
-import LocationPickerModal from "../components/LocationPickerModal.jsx";
+import MapLoadingOverlay from "../components/MapLoadingOverlay.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { dayKey } from "../lib/analytics.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendPickupViaWhatsApp } from "../lib/whatsapp.js";
+
+// Leaflet + react-leaflet are a meaningful chunk on their own — only loaded
+// once a visitor actually taps "Pin Pickup Location on Map", not on every
+// visit to this form.
+const LocationPickerModal = lazy(() => import("../components/LocationPickerModal.jsx"));
 
 // The services customers most commonly request a doorstep pickup for —
 // "Dry Clean & Steam Iron" first and selected by default, since it's the
@@ -213,10 +218,12 @@ export default function SchedulePickup() {
       </section>
 
       {showLocationPicker && (
-        <LocationPickerModal
-          onConfirm={handleLocationConfirm}
-          onClose={() => setShowLocationPicker(false)}
-        />
+        <Suspense fallback={<MapLoadingOverlay />}>
+          <LocationPickerModal
+            onConfirm={handleLocationConfirm}
+            onClose={() => setShowLocationPicker(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
