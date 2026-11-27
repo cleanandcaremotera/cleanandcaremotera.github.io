@@ -18,10 +18,11 @@ import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
 import LeadTable, { DetailField } from "../components/LeadTable.jsx";
+import NotifyPreviewModal from "../components/NotifyPreviewModal.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { img } from "../lib/assets.js";
-import { leadServiceLabel, sendLeadUpdateViaWhatsApp } from "../lib/whatsapp.js";
+import { buildLeadUpdateMessage, leadServiceLabel, sendWhatsAppToLead } from "../lib/whatsapp.js";
 
 // Order here is also the tab-bar display order, and TABS[0] is the tab
 // shown when /admin is opened with no ?tab= param — Service Bookings is
@@ -250,6 +251,7 @@ export default function Admin() {
   const [feedback, setFeedback] = useState([]);
   const [whatsappMessages, setWhatsappMessages] = useState([]);
   const [whatsappLoading, setWhatsappLoading] = useState(true);
+  const [notifyPreview, setNotifyPreview] = useState(null); // { type, lead, feedbackUrl } | null
 
   const [offerFiles, setOfferFiles] = useState([]);
   const [offerStatus, setOfferStatus] = useState(null);
@@ -600,7 +602,14 @@ export default function Admin() {
   function notifyCustomer(type, lead) {
     const label = leadServiceLabel(type, lead);
     const feedbackUrl = `${window.location.origin}${import.meta.env.BASE_URL}feedback?lead=${lead.id}&service=${encodeURIComponent(label)}`;
-    sendLeadUpdateViaWhatsApp({ type, lead, feedbackUrl });
+    setNotifyPreview({ type, lead, feedbackUrl });
+  }
+
+  function confirmNotify(includeGoogleReview) {
+    const { type, lead, feedbackUrl } = notifyPreview;
+    const message = buildLeadUpdateMessage({ type, lead, feedbackUrl, includeGoogleReview });
+    sendWhatsAppToLead(lead, message);
+    setNotifyPreview(null);
   }
 
   useEffect(() => {
@@ -664,6 +673,7 @@ export default function Admin() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-cream-light">
       {/* Header band — same ink/lime language as the site's own CTA banners */}
       <div className="bg-ink text-white">
@@ -963,5 +973,15 @@ export default function Admin() {
         </div>
       </div>
     </div>
+
+    {notifyPreview && (
+      <NotifyPreviewModal
+        buildMessage={(includeGoogleReview) => buildLeadUpdateMessage({ ...notifyPreview, includeGoogleReview })}
+        showGoogleReviewOption={(notifyPreview.lead.status || "pending") === "completed"}
+        onConfirm={confirmNotify}
+        onCancel={() => setNotifyPreview(null)}
+      />
+    )}
+    </>
   );
 }

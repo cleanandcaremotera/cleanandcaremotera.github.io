@@ -2,11 +2,7 @@ import { Facebook, Instagram, Mail, MapPin, Phone, Star, Youtube } from "lucide-
 import { Link } from "react-router-dom";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { img } from "../lib/assets.js";
-
-// The business's Google Business Profile review link (by Place ID) — a
-// fixed external URL, not admin-editable content, so it lives here rather
-// than in the company doc.
-const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJlaPPNwCDXjkRUk3l-yrmNiU";
+import { GOOGLE_REVIEW_URL } from "../lib/whatsapp.js";
 
 export default function Footer() {
   const { company } = useCompany();

@@ -95,10 +95,16 @@ export function leadServiceLabel(type, lead) {
   return "Enquiry";
 }
 
-// Unlike the other send* helpers above (which message the business number),
-// this one addresses the lead's own phone — it's the admin notifying a
-// customer, not a customer contacting the business.
-export function sendLeadUpdateViaWhatsApp({ type, lead, feedbackUrl }) {
+// The business's Google Business Profile review link (by Place ID) — a
+// fixed external URL shared by the footer's "Rate Us on Google" button and
+// the admin's completion-message Google-review tick mark.
+export const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJlaPPNwCDXjkRUk3l-yrmNiU";
+
+// Builds the status-update text the admin sends to a customer — split out
+// from the actual send so the admin's preview modal can re-render it live
+// as the "include Google review" tick mark is toggled, before anything
+// actually goes out over WhatsApp.
+export function buildLeadUpdateMessage({ type, lead, feedbackUrl, includeGoogleReview }) {
   const label = leadServiceLabel(type, lead).toLowerCase();
   const status = lead.status || "pending";
   const lines = [`Hi ${lead.name || "there"}, this is Clean & Care.`];
@@ -120,6 +126,18 @@ export function sendLeadUpdateViaWhatsApp({ type, lead, feedbackUrl }) {
     lines.push(`We'd love your feedback — please rate your experience: ${feedbackUrl}`);
   }
 
+  if (status === "completed" && includeGoogleReview) {
+    lines.push("");
+    lines.push(`If you're satisfied with our service, please take a moment to rate us on Google: ${GOOGLE_REVIEW_URL}`);
+  }
+
+  return lines.join("\n");
+}
+
+// Unlike the other send* helpers above (which message the business number),
+// this one addresses the lead's own phone — it's the admin notifying a
+// customer, not a customer contacting the business.
+export function sendWhatsAppToLead(lead, message) {
   const to = normalizePhone(lead.phone);
-  window.open(`https://wa.me/${to}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank", "noopener,noreferrer");
+  window.open(`https://wa.me/${to}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
 }
