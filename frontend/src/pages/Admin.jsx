@@ -49,20 +49,19 @@ const SERVICE_TYPE_FILTERS = [
 
 function ServiceTypeFilterBar({ value, onChange }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-1.5">
+    <div className="mb-4 flex items-center gap-2">
       <span className="text-xs font-semibold text-ink/50">Filter:</span>
-      {SERVICE_TYPE_FILTERS.map((f) => (
-        <button
-          key={f.id}
-          type="button"
-          onClick={() => onChange(f.id)}
-          className={`rounded-pill px-3 py-1 text-xs font-semibold transition-colors ${
-            value === f.id ? "bg-ink text-white" : "bg-cream text-ink/60 hover:bg-cream/70"
-          }`}
-        >
-          {f.label}
-        </button>
-      ))}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-pill border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink"
+      >
+        {SERVICE_TYPE_FILTERS.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
