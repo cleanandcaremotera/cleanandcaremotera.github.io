@@ -1,4 +1,4 @@
-import { MessageCircleMore } from "lucide-react";
+import { Archive, MessageCircleMore } from "lucide-react";
 
 function formatTime(ts) {
   if (!ts?.toDate) return "";
@@ -17,7 +17,7 @@ function replyLink(phone) {
 // Messages (and their unread count) live in the parent Admin page now, so
 // the tab bar can show an accurate badge without this inbox being mounted
 // first — this component just renders what it's given.
-export default function AdminWhatsAppInbox({ messages, loading, onToggleRead }) {
+export default function AdminWhatsAppInbox({ messages, loading, onToggleRead, onArchive }) {
   const unreadCount = messages.filter((m) => !m.read).length;
 
   return (
@@ -42,12 +42,21 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead }) 
           <div key={m.id} className={`rounded-xl border p-4 ${m.read ? "border-ink/10" : "border-lime bg-lime/5"}`}>
             <div className="flex items-start justify-between gap-3">
               <p className="font-medium text-ink">{m.from}</p>
-              <button
-                onClick={() => onToggleRead(m.id, !m.read)}
-                className={`rounded-pill px-2.5 py-1 text-xs font-medium ${m.read ? "bg-cream text-ink/60" : "bg-lime text-ink"}`}
-              >
-                {m.read ? "Read" : "Mark read"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onToggleRead(m.id, !m.read)}
+                  className={`rounded-pill px-2.5 py-1 text-xs font-medium ${m.read ? "bg-cream text-ink/60" : "bg-lime text-ink"}`}
+                >
+                  {m.read ? "Read" : "Mark read"}
+                </button>
+                <button
+                  onClick={() => onArchive(m.id)}
+                  title="Archive"
+                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink/50 hover:bg-ink/10 hover:text-ink"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             <p className="mt-2 text-sm text-ink/70">{m.text}</p>
             <div className="mt-2 flex items-center justify-between">
@@ -77,7 +86,7 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead }) 
               <th className="px-4 py-3">Message</th>
               <th className="px-4 py-3">Received</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Reply</th>
+              <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -95,14 +104,23 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead }) 
                   </button>
                 </td>
                 <td className="px-4 py-2.5">
-                  <a
-                    href={replyLink(m.from)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs font-semibold text-lime-dark hover:underline"
-                  >
-                    <MessageCircleMore className="h-3.5 w-3.5" /> Reply
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={replyLink(m.from)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs font-semibold text-lime-dark hover:underline"
+                    >
+                      <MessageCircleMore className="h-3.5 w-3.5" /> Reply
+                    </a>
+                    <button
+                      onClick={() => onArchive(m.id)}
+                      title="Archive"
+                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink/50 hover:bg-ink/10 hover:text-ink"
+                    >
+                      <Archive className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

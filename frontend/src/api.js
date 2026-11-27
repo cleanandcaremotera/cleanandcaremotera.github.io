@@ -22,14 +22,18 @@ async function getOrdered(collectionName) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+async function batchUpdate(collectionName, ids, data) {
+  if (ids.length === 0) return;
+  const batch = writeBatch(db);
+  ids.forEach((id) => batch.update(doc(db, collectionName, id), data));
+  await batch.commit();
+}
+
 // `seen` only exists on docs created after this feature shipped — older
 // docs are left without the field so they never retroactively count as
 // unread. Cleared in one batch write when the admin opens the matching tab.
-async function markSeen(collectionName, ids) {
-  if (ids.length === 0) return;
-  const batch = writeBatch(db);
-  ids.forEach((id) => batch.update(doc(db, collectionName, id), { seen: true }));
-  await batch.commit();
+function markSeen(collectionName, ids) {
+  return batchUpdate(collectionName, ids, { seen: true });
 }
 
 export const api = {
@@ -85,6 +89,7 @@ export const api = {
       ...payload,
       status: "new",
       seen: false,
+      archived: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Thanks! We'll get back to you shortly." };
@@ -96,6 +101,7 @@ export const api = {
       ...payload,
       status: "pending",
       seen: false,
+      archived: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Pickup scheduled! Our team will confirm shortly." };
@@ -107,6 +113,7 @@ export const api = {
       ...payload,
       status: "pending",
       seen: false,
+      archived: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Order received! Confirm it on WhatsApp to finish." };
@@ -118,6 +125,7 @@ export const api = {
       ...payload,
       status: "pending",
       seen: false,
+      archived: false,
       createdAt: serverTimestamp(),
     });
     return { message: "Booking request sent! Confirm it on WhatsApp to finish." };
@@ -134,13 +142,22 @@ export const api = {
     await updateDoc(doc(db, "leads", id), { status });
   },
 
+  // Bulk status change for the "select several rows, set status once" flow.
+  async bulkUpdateLeadStatus(ids, status) {
+    await batchUpdate("leads", ids, { status });
+  },
+
   // Admin-only. Batch-clears the "unread" badge for a lead type's tab.
   async markLeadsSeen(ids) {
     await markSeen("leads", ids);
   },
 
+  async markLeadsArchived(ids, archived) {
+    await batchUpdate("leads", ids, { archived });
+  },
+
   async submitFeedback(payload) {
-    await addDoc(collection(db, "feedback"), { ...payload, seen: false, createdAt: serverTimestamp() });
+    await addDoc(collection(db, "feedback"), { ...payload, seen: false, archived: false, createdAt: serverTimestamp() });
   },
 
   // Admin-only (Firestore rules require an authenticated user for this).
@@ -154,6 +171,10 @@ export const api = {
     await markSeen("feedback", ids);
   },
 
+  async markFeedbackArchived(ids, archived) {
+    await batchUpdate("feedback", ids, { archived });
+  },
+
   // Admin-only. Written server-side by the Cloudflare Worker webhook
   // receiver (see cloudflare-worker/), never by the client.
   async getWhatsAppMessages() {
@@ -164,5 +185,9 @@ export const api = {
 
   async markWhatsAppMessageRead(id, read) {
     await updateDoc(doc(db, "whatsappMessages", id), { read });
+  },
+
+  async markWhatsAppArchived(ids, archived) {
+    await batchUpdate("whatsappMessages", ids, { archived });
   },
 };

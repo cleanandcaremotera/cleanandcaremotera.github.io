@@ -1,6 +1,7 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
+  Archive as ArchiveIcon,
   CalendarClock,
   Image as ImageIcon,
   Mail,
@@ -16,6 +17,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
+import LeadTable from "../components/LeadTable.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { img } from "../lib/assets.js";
@@ -30,52 +32,12 @@ const TABS = [
   { id: "cart", label: "Cart Orders", icon: ShoppingCart },
   { id: "pickup", label: "Pickup Requests", icon: Truck },
   { id: "feedback", label: "Feedback", icon: Star },
+  { id: "archive", label: "Archive", icon: ArchiveIcon },
 ];
 
-// The six data tabs get a summary card above the tab bar — not Offer or
-// Pricing, which aren't "count of new entries" in the same sense.
+// The six data tabs get a summary card above the tab bar — not Offer,
+// Pricing, or Archive, which aren't "count of new entries" in the same sense.
 const STAT_TAB_IDS = ["whatsapp", "contact", "service", "cart", "pickup", "feedback"];
-
-const STATUS_OPTIONS = ["new", "pending", "in-progress", "completed", "cancelled"];
-
-const STATUS_COLORS = {
-  new: "bg-blue-100 text-blue-800",
-  pending: "bg-amber-100 text-amber-800",
-  "in-progress": "bg-purple-100 text-purple-800",
-  completed: "bg-lime/30 text-ink",
-  cancelled: "bg-red-100 text-red-800",
-};
-
-function StatusSelect({ status, onChange }) {
-  return (
-    <select
-      value={status || "pending"}
-      onChange={(e) => onChange(e.target.value)}
-      className={`rounded-pill border-0 px-2.5 py-1 text-xs font-medium capitalize ${
-        STATUS_COLORS[status] || "bg-cream text-ink"
-      }`}
-    >
-      {STATUS_OPTIONS.map((s) => (
-        <option key={s} value={s}>
-          {s}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function NotifyButton({ onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Notify customer via WhatsApp"
-      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366]/25"
-    >
-      <MessageCircle className="h-4 w-4" />
-    </button>
-  );
-}
 
 function FeedbackStars({ rating = 0 }) {
   return (
@@ -90,6 +52,147 @@ function FeedbackStars({ rating = 0 }) {
 function formatDate(ts) {
   if (!ts?.toDate) return "";
   return ts.toDate().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatDateTime(ts) {
+  if (!ts?.toDate) return "";
+  return ts.toDate().toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+}
+
+// --- Column/mobile-card definitions for each lead type's LeadTable ---
+
+const SERVICE_COLUMNS = [
+  { label: "Service", render: (b) => <span className="font-medium">{b.serviceName}</span> },
+  { label: "Name", render: (b) => b.name },
+  { label: "Phone", render: (b) => b.phone },
+  {
+    label: "Address",
+    render: (b) => (
+      <>
+        {b.address}
+        {b.locationUrl && (
+          <a
+            href={b.locationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-xs font-semibold text-lime-dark hover:underline"
+          >
+            View on map &rarr;
+          </a>
+        )}
+      </>
+    ),
+  },
+  { label: "Message", render: (b) => b.message },
+];
+function serviceMobileCard(b) {
+  return (
+    <>
+      <p className="font-medium text-ink">{b.serviceName}</p>
+      <p className="mt-2 text-sm text-ink/70">
+        {b.name} &middot; {b.phone}
+      </p>
+      <p className="text-sm text-ink/60">{b.address}</p>
+      {b.locationUrl && (
+        <a
+          href={b.locationUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-block text-xs font-semibold text-lime-dark hover:underline"
+        >
+          View pinned location &rarr;
+        </a>
+      )}
+      {b.message && <p className="mt-1 text-xs text-ink/50">{b.message}</p>}
+    </>
+  );
+}
+
+const CART_COLUMNS = [
+  { label: "Name", render: (o) => o.name },
+  { label: "Phone", render: (o) => o.phone },
+  { label: "Items", render: (o) => (o.items || []).map((it) => `${it.item} x${it.qty}`).join(", ") },
+  { label: "Total", render: (o) => <>&#8377;{o.total}</> },
+];
+function cartMobileCard(o) {
+  return (
+    <>
+      <p className="font-medium text-ink">{o.name}</p>
+      <p className="mt-1 text-sm text-ink/60">{o.phone}</p>
+      <p className="mt-2 text-sm text-ink/70">{(o.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}</p>
+      <p className="mt-1 font-semibold text-ink">&#8377;{o.total}</p>
+    </>
+  );
+}
+
+const PICKUP_COLUMNS = [
+  { label: "Name", render: (p) => p.name },
+  { label: "Phone", render: (p) => p.phone },
+  { label: "Address", render: (p) => p.address },
+  { label: "Service", render: (p) => p.service },
+];
+function pickupMobileCard(p) {
+  return (
+    <>
+      <p className="font-medium text-ink">{p.name}</p>
+      <p className="mt-1 text-sm text-ink/60">{p.phone}</p>
+      <p className="text-sm text-ink/70">{p.address}</p>
+      <p className="mt-1 text-xs text-ink/50">{p.service}</p>
+    </>
+  );
+}
+
+const CONTACT_COLUMNS = [
+  { label: "Name", render: (c) => c.name },
+  { label: "Phone", render: (c) => c.phone },
+  { label: "Email", render: (c) => c.email },
+  { label: "Message", render: (c) => c.message },
+];
+function contactMobileCard(c) {
+  return (
+    <>
+      <p className="font-medium text-ink">{c.name}</p>
+      <p className="mt-1 text-sm text-ink/60">
+        {c.phone}
+        {c.email ? ` · ${c.email}` : ""}
+      </p>
+      {c.message && <p className="mt-1 text-sm text-ink/70">{c.message}</p>}
+    </>
+  );
+}
+
+const FEEDBACK_COLUMNS = [
+  { label: "Service", render: (f) => <span className="font-medium">{f.service || "Service"}</span> },
+  { label: "Rating", render: (f) => <FeedbackStars rating={f.rating} /> },
+  { label: "Comment", render: (f) => f.comment },
+  { label: "Date", render: (f) => <span className="text-ink/60">{formatDate(f.createdAt)}</span> },
+];
+function feedbackMobileCard(f) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-medium text-ink">{f.service || "Service"}</p>
+        <FeedbackStars rating={f.rating} />
+      </div>
+      <p className="mt-1 text-xs text-ink/50">{formatDate(f.createdAt)}</p>
+      {f.comment && <p className="mt-2 text-sm text-ink/70">{f.comment}</p>}
+    </>
+  );
+}
+
+const WHATSAPP_COLUMNS = [
+  { label: "From", render: (m) => <span className="font-medium">{m.from}</span> },
+  { label: "Message", render: (m) => m.text },
+  { label: "Received", render: (m) => <span className="text-ink/60">{formatDateTime(m.createdAt)}</span> },
+];
+function whatsappMobileCard(m) {
+  return (
+    <>
+      <p className="font-medium text-ink">{m.from}</p>
+      <p className="mt-2 text-sm text-ink/70">{m.text}</p>
+      <p className="mt-1 text-xs text-ink/50">{formatDateTime(m.createdAt)}</p>
+    </>
+  );
 }
 
 export default function Admin() {
@@ -111,10 +214,43 @@ export default function Admin() {
   const [offerUrls, setOfferUrls] = useState([]);
   const [offerProgress, setOfferProgress] = useState({ index: 0, total: 0, percent: 0 });
 
+  // Row selection, keyed per table (not just per tab) — the Archive tab
+  // renders several LeadTables at once, and without separate keys per
+  // type a checkbox ticked in one table would bleed into another's
+  // "N selected" count and bulk actions.
+  const [selectedByType, setSelectedByType] = useState({});
+
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : TABS[0].id;
   function setActiveTab(id) {
     setSearchParams({ tab: id });
+  }
+
+  useEffect(() => {
+    setSelectedByType({});
+  }, [activeTab]);
+
+  function getSelected(type) {
+    return selectedByType[type] || new Set();
+  }
+  function toggleOne(type, id) {
+    setSelectedByType((prev) => {
+      const current = prev[type] || new Set();
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { ...prev, [type]: next };
+    });
+  }
+  function toggleAll(type, items) {
+    setSelectedByType((prev) => {
+      const current = prev[type] || new Set();
+      const allSelected = items.length > 0 && items.every((i) => current.has(i.id));
+      return { ...prev, [type]: allSelected ? new Set() : new Set(items.map((i) => i.id)) };
+    });
+  }
+  function clearSelected(type) {
+    setSelectedByType((prev) => ({ ...prev, [type]: new Set() }));
   }
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
@@ -200,6 +336,53 @@ export default function Admin() {
   const updateCartStatus = makeStatusHandler(setCartOrders);
   const updateBookingStatus = makeStatusHandler(setBookings);
 
+  // Single-row archive/restore toggle — reused for both the active tab
+  // (archives) and the Archive tab (restores).
+  function makeArchiveHandler(setList, markFn) {
+    return async (id, archived) => {
+      setList((prev) => prev.map((d) => (d.id === id ? { ...d, archived } : d)));
+      try {
+        await markFn([id], archived);
+      } catch {
+        // Not critical — admin can just retry the toggle.
+      }
+    };
+  }
+  const archiveContact = makeArchiveHandler(setContacts, api.markLeadsArchived);
+  const archiveBooking = makeArchiveHandler(setBookings, api.markLeadsArchived);
+  const archiveCart = makeArchiveHandler(setCartOrders, api.markLeadsArchived);
+  const archivePickup = makeArchiveHandler(setPickups, api.markLeadsArchived);
+  const archiveFeedbackItem = makeArchiveHandler(setFeedback, api.markFeedbackArchived);
+  const archiveWhatsapp = makeArchiveHandler(setWhatsappMessages, api.markWhatsAppArchived);
+
+  // Bulk variants — operate on whatever is selected under `type`'s key.
+  function makeBulkStatusHandler(type, setList) {
+    return async (status) => {
+      const ids = [...getSelected(type)];
+      if (ids.length === 0) return;
+      setList((prev) => prev.map((d) => (ids.includes(d.id) ? { ...d, status } : d)));
+      clearSelected(type);
+      try {
+        await api.bulkUpdateLeadStatus(ids, status);
+      } catch {
+        // Not critical — admin can just retry.
+      }
+    };
+  }
+  function makeBulkArchiveHandler(type, setList, markFn, archivedValue) {
+    return async () => {
+      const ids = [...getSelected(type)];
+      if (ids.length === 0) return;
+      setList((prev) => prev.map((d) => (ids.includes(d.id) ? { ...d, archived: archivedValue } : d)));
+      clearSelected(type);
+      try {
+        await markFn(ids, archivedValue);
+      } catch {
+        // Not critical — admin can just retry.
+      }
+    };
+  }
+
   // Clears a tab's unread badge by batch-marking any `seen: false` docs in
   // that list as seen, the moment the admin actually opens that tab.
   async function markSeenIfNeeded(list, setList, markFn) {
@@ -213,31 +396,56 @@ export default function Admin() {
     }
   }
 
+  // Active (non-archived) vs. archived split for every record type —
+  // archived records are simply filtered out of the normal tabs and only
+  // ever shown on the Archive tab.
+  const activeContacts = contacts.filter((c) => c.archived !== true);
+  const archivedContacts = contacts.filter((c) => c.archived === true);
+  const activeBookings = bookings.filter((b) => b.archived !== true);
+  const archivedBookings = bookings.filter((b) => b.archived === true);
+  const activeCartOrders = cartOrders.filter((o) => o.archived !== true);
+  const archivedCartOrders = cartOrders.filter((o) => o.archived === true);
+  const activePickups = pickups.filter((p) => p.archived !== true);
+  const archivedPickups = pickups.filter((p) => p.archived === true);
+  const activeFeedback = feedback.filter((f) => f.archived !== true);
+  const archivedFeedback = feedback.filter((f) => f.archived === true);
+  const activeWhatsapp = whatsappMessages.filter((m) => m.archived !== true);
+  const archivedWhatsapp = whatsappMessages.filter((m) => m.archived === true);
+
+  const hasArchivedRecords =
+    archivedContacts.length > 0 ||
+    archivedBookings.length > 0 ||
+    archivedCartOrders.length > 0 ||
+    archivedPickups.length > 0 ||
+    archivedFeedback.length > 0 ||
+    archivedWhatsapp.length > 0;
+
   useEffect(() => {
     if (!user) return;
-    if (activeTab === "contact") markSeenIfNeeded(contacts, setContacts, api.markLeadsSeen);
-    else if (activeTab === "cart") markSeenIfNeeded(cartOrders, setCartOrders, api.markLeadsSeen);
-    else if (activeTab === "service") markSeenIfNeeded(bookings, setBookings, api.markLeadsSeen);
-    else if (activeTab === "pickup") markSeenIfNeeded(pickups, setPickups, api.markLeadsSeen);
-    else if (activeTab === "feedback") markSeenIfNeeded(feedback, setFeedback, api.markFeedbackSeen);
+    if (activeTab === "contact") markSeenIfNeeded(activeContacts, setContacts, api.markLeadsSeen);
+    else if (activeTab === "cart") markSeenIfNeeded(activeCartOrders, setCartOrders, api.markLeadsSeen);
+    else if (activeTab === "service") markSeenIfNeeded(activeBookings, setBookings, api.markLeadsSeen);
+    else if (activeTab === "pickup") markSeenIfNeeded(activePickups, setPickups, api.markLeadsSeen);
+    else if (activeTab === "feedback") markSeenIfNeeded(activeFeedback, setFeedback, api.markFeedbackSeen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, user, contacts, cartOrders, bookings, pickups, feedback]);
 
   const unreadByTab = {
-    whatsapp: whatsappMessages.filter((m) => !m.read).length,
-    contact: contacts.filter((c) => c.seen === false).length,
-    cart: cartOrders.filter((o) => o.seen === false).length,
-    service: bookings.filter((b) => b.seen === false).length,
-    pickup: pickups.filter((p) => p.seen === false).length,
-    feedback: feedback.filter((f) => f.seen === false).length,
+    whatsapp: activeWhatsapp.filter((m) => !m.read).length,
+    contact: activeContacts.filter((c) => c.seen === false).length,
+    cart: activeCartOrders.filter((o) => o.seen === false).length,
+    service: activeBookings.filter((b) => b.seen === false).length,
+    pickup: activePickups.filter((p) => p.seen === false).length,
+    feedback: activeFeedback.filter((f) => f.seen === false).length,
   };
 
   const countByTab = {
-    whatsapp: whatsappMessages.length,
-    contact: contacts.length,
-    cart: cartOrders.length,
-    service: bookings.length,
-    pickup: pickups.length,
-    feedback: feedback.length,
+    whatsapp: activeWhatsapp.length,
+    contact: activeContacts.length,
+    cart: activeCartOrders.length,
+    service: activeBookings.length,
+    pickup: activePickups.length,
+    feedback: activeFeedback.length,
   };
 
   async function toggleWhatsAppRead(id, read) {
@@ -396,403 +604,297 @@ export default function Admin() {
 
         {/* Active tab content, framed like the rest of the site's content cards */}
         <div className="rounded-3xl border border-ink/10 bg-white p-5 shadow-sm sm:p-8">
+          {activeTab === "offer" && (
+            <section className="mb-12">
+              <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Offer Banner</h2>
+              <p className="mb-4 text-sm text-ink/60">
+                Upload one or more images to show as a slideshow on the site's Offers page.
+              </p>
+              <div className="rounded-2xl border border-ink/10 p-6">
+                {offerUrls.length > 0 ? (
+                  <div className="mb-5 flex flex-wrap gap-3">
+                    {offerUrls.map((url) => (
+                      <div key={url} className="group relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-cream">
+                        <img src={url} alt="Offer" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeOfferImage(url)}
+                          aria-label="Remove image"
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mb-5 text-xs text-ink/40">
+                    {!cloudinaryConfigured()
+                      ? "Image hosting not configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)"
+                      : "No offer images set"}
+                  </p>
+                )}
 
-      {activeTab === "offer" && (
-      <section className="mb-12">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Offer Banner</h2>
-        <p className="mb-4 text-sm text-ink/60">
-          Upload one or more images to show as a slideshow on the site's Offers page.
-        </p>
-        <div className="rounded-2xl border border-ink/10 p-6">
-          {offerUrls.length > 0 ? (
-            <div className="mb-5 flex flex-wrap gap-3">
-              {offerUrls.map((url) => (
-                <div key={url} className="group relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-cream">
-                  <img src={url} alt="Offer" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeOfferImage(url)}
-                    aria-label="Remove image"
-                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mb-5 text-xs text-ink/40">
-              {!cloudinaryConfigured()
-                ? "Image hosting not configured (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET missing)"
-                : "No offer images set"}
-            </p>
+                <form onSubmit={uploadOffers} className="space-y-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setOfferFiles(Array.from(e.target.files || []))}
+                    className="block w-full text-sm text-ink/70 file:mr-4 file:rounded-pill file:border-0 file:bg-cream file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime/30"
+                  />
+                  {offerStatus?.loading && (
+                    <div>
+                      <div className="h-2 w-full overflow-hidden rounded-pill bg-cream">
+                        <div
+                          className="h-full rounded-pill bg-lime transition-all"
+                          style={{ width: `${offerProgress.percent}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-ink/50">
+                        Uploading image {offerProgress.index + 1} of {offerProgress.total}… {offerProgress.percent}%
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="submit"
+                      className="btn-pill-lime !py-2 !text-xs"
+                      disabled={offerFiles.length === 0 || offerStatus?.loading}
+                    >
+                      {offerStatus?.loading ? "Uploading…" : offerFiles.length > 1 ? `Upload ${offerFiles.length} Images` : "Upload"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleOfferVisible}
+                      className="btn-pill-outline !py-2 !text-xs"
+                      disabled={offerUrls.length === 0 || offerStatus?.loading}
+                    >
+                      {offerVisible ? "Hide From Offers Page" : "Show On Offers Page"}
+                    </button>
+                  </div>
+                  {offerStatus?.success && <p className="text-sm text-lime-dark">{offerStatus.success}</p>}
+                  {offerStatus?.error && <p className="text-sm text-red-600">{offerStatus.error}</p>}
+                </form>
+              </div>
+            </section>
           )}
 
-          <form onSubmit={uploadOffers} className="space-y-3">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => setOfferFiles(Array.from(e.target.files || []))}
-              className="block w-full text-sm text-ink/70 file:mr-4 file:rounded-pill file:border-0 file:bg-cream file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime/30"
+          {activeTab === "whatsapp" && (
+            <AdminWhatsAppInbox
+              messages={activeWhatsapp}
+              loading={whatsappLoading}
+              onToggleRead={toggleWhatsAppRead}
+              onArchive={(id) => archiveWhatsapp(id, true)}
             />
-            {offerStatus?.loading && (
-              <div>
-                <div className="h-2 w-full overflow-hidden rounded-pill bg-cream">
-                  <div
-                    className="h-full rounded-pill bg-lime transition-all"
-                    style={{ width: `${offerProgress.percent}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-ink/50">
-                  Uploading image {offerProgress.index + 1} of {offerProgress.total}… {offerProgress.percent}%
-                </p>
-              </div>
-            )}
+          )}
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="submit"
-                className="btn-pill-lime !py-2 !text-xs"
-                disabled={offerFiles.length === 0 || offerStatus?.loading}
-              >
-                {offerStatus?.loading ? "Uploading…" : offerFiles.length > 1 ? `Upload ${offerFiles.length} Images` : "Upload"}
-              </button>
-              <button
-                type="button"
-                onClick={toggleOfferVisible}
-                className="btn-pill-outline !py-2 !text-xs"
-                disabled={offerUrls.length === 0 || offerStatus?.loading}
-              >
-                {offerVisible ? "Hide From Offers Page" : "Show On Offers Page"}
-              </button>
-            </div>
-            {offerStatus?.success && <p className="text-sm text-lime-dark">{offerStatus.success}</p>}
-            {offerStatus?.error && <p className="text-sm text-red-600">{offerStatus.error}</p>}
-          </form>
-        </div>
-      </section>
-      )}
+          {activeTab === "pricing" && <AdminPricing />}
 
-      {activeTab === "whatsapp" && (
-        <AdminWhatsAppInbox messages={whatsappMessages} loading={whatsappLoading} onToggleRead={toggleWhatsAppRead} />
-      )}
+          {activeTab === "service" && (
+            <LeadTable
+              title="Service Bookings"
+              items={activeBookings}
+              columns={SERVICE_COLUMNS}
+              renderMobileCard={serviceMobileCard}
+              onStatusChange={updateBookingStatus}
+              onNotify={(b) => notifyCustomer("service", b)}
+              onArchiveToggle={archiveBooking}
+              selectedIds={getSelected("service")}
+              onToggleOne={(id) => toggleOne("service", id)}
+              onToggleAll={() => toggleAll("service", activeBookings)}
+              onBulkStatus={makeBulkStatusHandler("service", setBookings)}
+              onBulkArchive={makeBulkArchiveHandler("service", setBookings, api.markLeadsArchived, true)}
+              emptyText="No service bookings yet."
+            />
+          )}
 
-      {activeTab === "pricing" && <AdminPricing />}
+          {activeTab === "cart" && (
+            <LeadTable
+              title="Cart Orders"
+              items={activeCartOrders}
+              columns={CART_COLUMNS}
+              renderMobileCard={cartMobileCard}
+              onStatusChange={updateCartStatus}
+              onNotify={(o) => notifyCustomer("cart", o)}
+              onArchiveToggle={archiveCart}
+              selectedIds={getSelected("cart")}
+              onToggleOne={(id) => toggleOne("cart", id)}
+              onToggleAll={() => toggleAll("cart", activeCartOrders)}
+              onBulkStatus={makeBulkStatusHandler("cart", setCartOrders)}
+              onBulkArchive={makeBulkArchiveHandler("cart", setCartOrders, api.markLeadsArchived, true)}
+              emptyText="No cart orders yet."
+            />
+          )}
 
-      {activeTab === "service" && (
-      <section className="mb-12">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Service Bookings</h2>
+          {activeTab === "pickup" && (
+            <LeadTable
+              title="Pickup Requests"
+              items={activePickups}
+              columns={PICKUP_COLUMNS}
+              renderMobileCard={pickupMobileCard}
+              onStatusChange={updatePickupStatus}
+              onNotify={(p) => notifyCustomer("pickup", p)}
+              onArchiveToggle={archivePickup}
+              selectedIds={getSelected("pickup")}
+              onToggleOne={(id) => toggleOne("pickup", id)}
+              onToggleAll={() => toggleAll("pickup", activePickups)}
+              onBulkStatus={makeBulkStatusHandler("pickup", setPickups)}
+              onBulkArchive={makeBulkArchiveHandler("pickup", setPickups, api.markLeadsArchived, true)}
+              emptyText="No pickup requests yet."
+            />
+          )}
 
-        {/* Mobile: stacked cards */}
-        <div className="space-y-3 sm:hidden">
-          {bookings.map((b) => (
-            <div key={b.id} className="rounded-xl border border-ink/10 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-ink">{b.serviceName}</p>
-                <div className="flex items-center gap-2">
-                  <StatusSelect status={b.status} onChange={(s) => updateBookingStatus(b.id, s)} />
-                  <NotifyButton onClick={() => notifyCustomer("service", b)} />
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-ink/70">{b.name} &middot; {b.phone}</p>
-              <p className="text-sm text-ink/60">{b.address}</p>
-              {b.locationUrl && (
-                <a
-                  href={b.locationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-block text-xs font-semibold text-lime-dark hover:underline"
-                >
-                  View pinned location &rarr;
-                </a>
+          {activeTab === "contact" && (
+            <LeadTable
+              title="Contact Messages"
+              items={activeContacts}
+              columns={CONTACT_COLUMNS}
+              renderMobileCard={contactMobileCard}
+              onStatusChange={updateContactStatus}
+              onNotify={(c) => notifyCustomer("contact", c)}
+              onArchiveToggle={archiveContact}
+              selectedIds={getSelected("contact")}
+              onToggleOne={(id) => toggleOne("contact", id)}
+              onToggleAll={() => toggleAll("contact", activeContacts)}
+              onBulkStatus={makeBulkStatusHandler("contact", setContacts)}
+              onBulkArchive={makeBulkArchiveHandler("contact", setContacts, api.markLeadsArchived, true)}
+              emptyText="No messages yet."
+            />
+          )}
+
+          {activeTab === "feedback" && (
+            <LeadTable
+              title="Customer Feedback"
+              items={activeFeedback}
+              columns={FEEDBACK_COLUMNS}
+              renderMobileCard={feedbackMobileCard}
+              hasStatus={false}
+              onArchiveToggle={archiveFeedbackItem}
+              selectedIds={getSelected("feedback")}
+              onToggleOne={(id) => toggleOne("feedback", id)}
+              onToggleAll={() => toggleAll("feedback", activeFeedback)}
+              onBulkArchive={makeBulkArchiveHandler("feedback", setFeedback, api.markFeedbackArchived, true)}
+              emptyText="No feedback submitted yet."
+            />
+          )}
+
+          {activeTab === "archive" && (
+            <div className="space-y-12">
+              {!hasArchivedRecords && <p className="text-sm text-ink/50">No archived records yet.</p>}
+
+              {archivedContacts.length > 0 && (
+                <LeadTable
+                  title="Archived Contact Messages"
+                  items={archivedContacts}
+                  columns={CONTACT_COLUMNS}
+                  renderMobileCard={contactMobileCard}
+                  archived
+                  onStatusChange={updateContactStatus}
+                  onNotify={(c) => notifyCustomer("contact", c)}
+                  onArchiveToggle={archiveContact}
+                  selectedIds={getSelected("contact-archived")}
+                  onToggleOne={(id) => toggleOne("contact-archived", id)}
+                  onToggleAll={() => toggleAll("contact-archived", archivedContacts)}
+                  onBulkStatus={makeBulkStatusHandler("contact-archived", setContacts)}
+                  onBulkArchive={makeBulkArchiveHandler("contact-archived", setContacts, api.markLeadsArchived, false)}
+                  emptyText=""
+                />
               )}
-              {b.message && <p className="mt-1 text-xs text-ink/50">{b.message}</p>}
-            </div>
-          ))}
-          {bookings.length === 0 && <p className="text-sm text-ink/50">No service bookings yet.</p>}
-        </div>
 
-        {/* Tablet/desktop: table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-cream">
-              <tr>
-                <th className="px-4 py-3">Service</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3">Message</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id} className="border-t border-ink/5">
-                  <td className="px-4 py-2.5 font-medium">{b.serviceName}</td>
-                  <td className="px-4 py-2.5">{b.name}</td>
-                  <td className="px-4 py-2.5">{b.phone}</td>
-                  <td className="px-4 py-2.5">
-                    {b.address}
-                    {b.locationUrl && (
-                      <a
-                        href={b.locationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-xs font-semibold text-lime-dark hover:underline"
-                      >
-                        View on map &rarr;
-                      </a>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">{b.message}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <StatusSelect status={b.status} onChange={(s) => updateBookingStatus(b.id, s)} />
-                      <NotifyButton onClick={() => notifyCustomer("service", b)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {bookings.length === 0 && (
-                <tr><td className="px-4 py-4 text-ink/50" colSpan={6}>No service bookings yet.</td></tr>
+              {archivedBookings.length > 0 && (
+                <LeadTable
+                  title="Archived Service Bookings"
+                  items={archivedBookings}
+                  columns={SERVICE_COLUMNS}
+                  renderMobileCard={serviceMobileCard}
+                  archived
+                  onStatusChange={updateBookingStatus}
+                  onNotify={(b) => notifyCustomer("service", b)}
+                  onArchiveToggle={archiveBooking}
+                  selectedIds={getSelected("service-archived")}
+                  onToggleOne={(id) => toggleOne("service-archived", id)}
+                  onToggleAll={() => toggleAll("service-archived", archivedBookings)}
+                  onBulkStatus={makeBulkStatusHandler("service-archived", setBookings)}
+                  onBulkArchive={makeBulkArchiveHandler("service-archived", setBookings, api.markLeadsArchived, false)}
+                  emptyText=""
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      )}
 
-      {activeTab === "cart" && (
-      <section className="mb-12">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Cart Orders</h2>
-
-        {/* Mobile: stacked cards */}
-        <div className="space-y-3 sm:hidden">
-          {cartOrders.map((o) => (
-            <div key={o.id} className="rounded-xl border border-ink/10 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-ink">{o.name}</p>
-                <div className="flex items-center gap-2">
-                  <StatusSelect status={o.status} onChange={(s) => updateCartStatus(o.id, s)} />
-                  <NotifyButton onClick={() => notifyCustomer("cart", o)} />
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-ink/60">{o.phone}</p>
-              <p className="mt-2 text-sm text-ink/70">
-                {(o.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}
-              </p>
-              <p className="mt-1 font-semibold text-ink">&#8377;{o.total}</p>
-            </div>
-          ))}
-          {cartOrders.length === 0 && <p className="text-sm text-ink/50">No cart orders yet.</p>}
-        </div>
-
-        {/* Tablet/desktop: table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-cream">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Items</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cartOrders.map((o) => (
-                <tr key={o.id} className="border-t border-ink/5">
-                  <td className="px-4 py-2.5">{o.name}</td>
-                  <td className="px-4 py-2.5">{o.phone}</td>
-                  <td className="px-4 py-2.5">
-                    {(o.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}
-                  </td>
-                  <td className="px-4 py-2.5">₹{o.total}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <StatusSelect status={o.status} onChange={(s) => updateCartStatus(o.id, s)} />
-                      <NotifyButton onClick={() => notifyCustomer("cart", o)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {cartOrders.length === 0 && (
-                <tr><td className="px-4 py-4 text-ink/50" colSpan={5}>No cart orders yet.</td></tr>
+              {archivedCartOrders.length > 0 && (
+                <LeadTable
+                  title="Archived Cart Orders"
+                  items={archivedCartOrders}
+                  columns={CART_COLUMNS}
+                  renderMobileCard={cartMobileCard}
+                  archived
+                  onStatusChange={updateCartStatus}
+                  onNotify={(o) => notifyCustomer("cart", o)}
+                  onArchiveToggle={archiveCart}
+                  selectedIds={getSelected("cart-archived")}
+                  onToggleOne={(id) => toggleOne("cart-archived", id)}
+                  onToggleAll={() => toggleAll("cart-archived", archivedCartOrders)}
+                  onBulkStatus={makeBulkStatusHandler("cart-archived", setCartOrders)}
+                  onBulkArchive={makeBulkArchiveHandler("cart-archived", setCartOrders, api.markLeadsArchived, false)}
+                  emptyText=""
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      )}
 
-      {activeTab === "pickup" && (
-      <section className="mb-12">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Pickup Requests</h2>
-
-        {/* Mobile: stacked cards */}
-        <div className="space-y-3 sm:hidden">
-          {pickups.map((p) => (
-            <div key={p.id} className="rounded-xl border border-ink/10 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-ink">{p.name}</p>
-                <div className="flex items-center gap-2">
-                  <StatusSelect status={p.status} onChange={(s) => updatePickupStatus(p.id, s)} />
-                  <NotifyButton onClick={() => notifyCustomer("pickup", p)} />
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-ink/60">{p.phone}</p>
-              <p className="text-sm text-ink/70">{p.address}</p>
-              <p className="mt-1 text-xs text-ink/50">{p.service}</p>
-            </div>
-          ))}
-          {pickups.length === 0 && <p className="text-sm text-ink/50">No pickup requests yet.</p>}
-        </div>
-
-        {/* Tablet/desktop: table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-cream">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3">Service</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pickups.map((p) => (
-                <tr key={p.id} className="border-t border-ink/5">
-                  <td className="px-4 py-2.5">{p.name}</td>
-                  <td className="px-4 py-2.5">{p.phone}</td>
-                  <td className="px-4 py-2.5">{p.address}</td>
-                  <td className="px-4 py-2.5">{p.service}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <StatusSelect status={p.status} onChange={(s) => updatePickupStatus(p.id, s)} />
-                      <NotifyButton onClick={() => notifyCustomer("pickup", p)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {pickups.length === 0 && (
-                <tr><td className="px-4 py-4 text-ink/50" colSpan={5}>No pickup requests yet.</td></tr>
+              {archivedPickups.length > 0 && (
+                <LeadTable
+                  title="Archived Pickup Requests"
+                  items={archivedPickups}
+                  columns={PICKUP_COLUMNS}
+                  renderMobileCard={pickupMobileCard}
+                  archived
+                  onStatusChange={updatePickupStatus}
+                  onNotify={(p) => notifyCustomer("pickup", p)}
+                  onArchiveToggle={archivePickup}
+                  selectedIds={getSelected("pickup-archived")}
+                  onToggleOne={(id) => toggleOne("pickup-archived", id)}
+                  onToggleAll={() => toggleAll("pickup-archived", archivedPickups)}
+                  onBulkStatus={makeBulkStatusHandler("pickup-archived", setPickups)}
+                  onBulkArchive={makeBulkArchiveHandler("pickup-archived", setPickups, api.markLeadsArchived, false)}
+                  emptyText=""
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      )}
 
-      {activeTab === "contact" && (
-      <section>
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Contact Messages</h2>
-
-        {/* Mobile: stacked cards */}
-        <div className="space-y-3 sm:hidden">
-          {contacts.map((c) => (
-            <div key={c.id} className="rounded-xl border border-ink/10 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-ink">{c.name}</p>
-                <div className="flex items-center gap-2">
-                  <StatusSelect status={c.status} onChange={(s) => updateContactStatus(c.id, s)} />
-                  <NotifyButton onClick={() => notifyCustomer("contact", c)} />
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-ink/60">
-                {c.phone}
-                {c.email ? ` · ${c.email}` : ""}
-              </p>
-              {c.message && <p className="mt-1 text-sm text-ink/70">{c.message}</p>}
-            </div>
-          ))}
-          {contacts.length === 0 && <p className="text-sm text-ink/50">No messages yet.</p>}
-        </div>
-
-        {/* Tablet/desktop: table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-cream">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Message</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contacts.map((c) => (
-                <tr key={c.id} className="border-t border-ink/5">
-                  <td className="px-4 py-2.5">{c.name}</td>
-                  <td className="px-4 py-2.5">{c.phone}</td>
-                  <td className="px-4 py-2.5">{c.email}</td>
-                  <td className="px-4 py-2.5">{c.message}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <StatusSelect status={c.status} onChange={(s) => updateContactStatus(c.id, s)} />
-                      <NotifyButton onClick={() => notifyCustomer("contact", c)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {contacts.length === 0 && (
-                <tr><td className="px-4 py-4 text-ink/50" colSpan={5}>No messages yet.</td></tr>
+              {archivedFeedback.length > 0 && (
+                <LeadTable
+                  title="Archived Feedback"
+                  items={archivedFeedback}
+                  columns={FEEDBACK_COLUMNS}
+                  renderMobileCard={feedbackMobileCard}
+                  hasStatus={false}
+                  archived
+                  onArchiveToggle={archiveFeedbackItem}
+                  selectedIds={getSelected("feedback-archived")}
+                  onToggleOne={(id) => toggleOne("feedback-archived", id)}
+                  onToggleAll={() => toggleAll("feedback-archived", archivedFeedback)}
+                  onBulkArchive={makeBulkArchiveHandler("feedback-archived", setFeedback, api.markFeedbackArchived, false)}
+                  emptyText=""
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      )}
 
-      {activeTab === "feedback" && (
-      <section className="mt-12">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Customer Feedback</h2>
-
-        {/* Mobile: stacked cards */}
-        <div className="space-y-3 sm:hidden">
-          {feedback.map((f) => (
-            <div key={f.id} className="rounded-xl border border-ink/10 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-ink">{f.service || "Service"}</p>
-                <FeedbackStars rating={f.rating} />
-              </div>
-              <p className="mt-1 text-xs text-ink/50">{formatDate(f.createdAt)}</p>
-              {f.comment && <p className="mt-2 text-sm text-ink/70">{f.comment}</p>}
-            </div>
-          ))}
-          {feedback.length === 0 && <p className="text-sm text-ink/50">No feedback submitted yet.</p>}
-        </div>
-
-        {/* Tablet/desktop: table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-cream">
-              <tr>
-                <th className="px-4 py-3">Service</th>
-                <th className="px-4 py-3">Rating</th>
-                <th className="px-4 py-3">Comment</th>
-                <th className="px-4 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {feedback.map((f) => (
-                <tr key={f.id} className="border-t border-ink/5">
-                  <td className="px-4 py-2.5 font-medium">{f.service || "Service"}</td>
-                  <td className="px-4 py-2.5"><FeedbackStars rating={f.rating} /></td>
-                  <td className="px-4 py-2.5">{f.comment}</td>
-                  <td className="px-4 py-2.5 text-ink/60">{formatDate(f.createdAt)}</td>
-                </tr>
-              ))}
-              {feedback.length === 0 && (
-                <tr><td className="px-4 py-4 text-ink/50" colSpan={4}>No feedback submitted yet.</td></tr>
+              {archivedWhatsapp.length > 0 && (
+                <LeadTable
+                  title="Archived WhatsApp Messages"
+                  items={archivedWhatsapp}
+                  columns={WHATSAPP_COLUMNS}
+                  renderMobileCard={whatsappMobileCard}
+                  hasStatus={false}
+                  archived
+                  onArchiveToggle={archiveWhatsapp}
+                  selectedIds={getSelected("whatsapp-archived")}
+                  onToggleOne={(id) => toggleOne("whatsapp-archived", id)}
+                  onToggleAll={() => toggleAll("whatsapp-archived", archivedWhatsapp)}
+                  onBulkArchive={makeBulkArchiveHandler("whatsapp-archived", setWhatsappMessages, api.markWhatsAppArchived, false)}
+                  emptyText=""
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      )}
+            </div>
+          )}
         </div>
       </div>
     </div>

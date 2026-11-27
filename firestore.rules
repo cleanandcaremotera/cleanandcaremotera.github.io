@@ -63,11 +63,11 @@ service cloud.firestore {
     // Worker webhook receiver writes these using a Google Cloud service
     // account, which authenticates through Firestore's REST API with IAM
     // credentials and bypasses these rules entirely (rules only govern the
-    // client SDK). The admin can read, and can only toggle the `read` flag.
+    // client SDK). The admin can read, and can only toggle `read`/`archived`.
     match /whatsappMessages/{docId} {
       allow create, delete: if false;
       allow read: if isAdmin();
-      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"]);
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "archived"]);
     }
   }
 }
