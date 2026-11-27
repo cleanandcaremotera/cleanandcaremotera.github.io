@@ -64,7 +64,12 @@ const company = {
   },
   phones: ["+91-81606-77875"],
   email: "cleanandcare.moterakoteshwar@gmail.com",
-  social: { youtube: "#", facebook: "#", linkedin: "#" },
+  social: {
+    youtube: "#",
+    facebook: "https://www.facebook.com/share/1FV6zdSHy1/",
+    instagram: "https://www.instagram.com/the.clean.and.care.motera",
+    linkedin: "#",
+  },
   footerQuote: "India's Trusted Live Professional Laundry & Dry-Cleaning Services at Global Standards",
   designCredit: "Clean & Care",
 };

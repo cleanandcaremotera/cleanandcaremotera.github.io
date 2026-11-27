@@ -1,4 +1,4 @@
-import { Facebook, Linkedin, Mail, MapPin, Phone, Youtube } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Mail, MapPin, Phone, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { img } from "../lib/assets.js";
@@ -19,13 +19,16 @@ export default function Footer() {
               Read More &rarr;
             </Link>
             <div className="mt-5 flex gap-3">
-              <a href={company?.social?.youtube || "#"} aria-label="YouTube" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
+              <a href={company?.social?.youtube || "#"} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
                 <Youtube className="h-4 w-4" />
               </a>
-              <a href={company?.social?.facebook || "#"} aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
+              <a href={company?.social?.facebook || "#"} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href={company?.social?.linkedin || "#"} aria-label="LinkedIn" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
+              <a href={company?.social?.instagram || "#"} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href={company?.social?.linkedin || "#"} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-lime hover:text-ink">
                 <Linkedin className="h-4 w-4" />
               </a>
             </div>
