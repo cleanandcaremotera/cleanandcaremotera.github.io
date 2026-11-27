@@ -1,7 +1,12 @@
-import { Facebook, Instagram, Mail, MapPin, Phone, Youtube } from "lucide-react";
+import { Facebook, Instagram, Mail, MapPin, Phone, Star, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { img } from "../lib/assets.js";
+
+// The business's Google Business Profile review link (by Place ID) — a
+// fixed external URL, not admin-editable content, so it lives here rather
+// than in the company doc.
+const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJlaPPNwCDXjkRUk3l-yrmNiU";
 
 export default function Footer() {
   const { company } = useCompany();
@@ -29,6 +34,15 @@ export default function Footer() {
                 <Instagram className="h-4 w-4" />
               </a>
             </div>
+            <a
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-pill-lime mt-5 !py-2 !text-xs"
+            >
+              <Star className="h-3.5 w-3.5" />
+              Rate Us on Google
+            </a>
           </div>
 
           <div>
