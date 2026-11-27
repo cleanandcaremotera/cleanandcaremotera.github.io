@@ -33,12 +33,18 @@ function GlobalFloatingActions() {
   return <FloatingActions />;
 }
 
+// The admin dashboard is its own self-contained workspace (own header,
+// own "View Site" link back out) — the customer-facing chrome around it
+// would just be dead weight, not a real nav for an admin to use.
 export default function App() {
+  const { pathname } = useLocation();
+  const isAdmin = pathname === "/admin";
+
   return (
     <CompanyProvider>
       <CartProvider>
         <ScrollToTop />
-        <Navbar />
+        {!isAdmin && <Navbar />}
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -52,12 +58,14 @@ export default function App() {
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
-        <Footer />
-        {/* Clearance for the fixed bottom nav so it doesn't cover footer content.
-            Matches BottomNav's own height (~56px content + the iOS home-indicator
-            safe area), not a flat value — notched iPhones need more than 64px. */}
-        <div className="lg:hidden" style={{ height: "calc(3.5rem + env(safe-area-inset-bottom))" }} />
-        <BottomNav />
+        {!isAdmin && <Footer />}
+        {!isAdmin && (
+          /* Clearance for the fixed bottom nav so it doesn't cover footer content.
+             Matches BottomNav's own height (~56px content + the iOS home-indicator
+             safe area), not a flat value — notched iPhones need more than 64px. */
+          <div className="lg:hidden" style={{ height: "calc(3.5rem + env(safe-area-inset-bottom))" }} />
+        )}
+        {!isAdmin && <BottomNav />}
         <GlobalFloatingActions />
       </CartProvider>
     </CompanyProvider>

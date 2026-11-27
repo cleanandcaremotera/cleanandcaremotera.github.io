@@ -2,7 +2,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebas
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { MessageCircle, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
@@ -213,7 +213,7 @@ export default function Admin() {
 
   if (!user) {
     return (
-      <div className="container-x flex min-h-[70vh] items-center justify-center py-16">
+      <div className="container-x flex min-h-[70vh] flex-col items-center justify-center gap-6 py-16">
         <form onSubmit={login} className="w-full max-w-sm space-y-4 rounded-2xl border border-ink/10 p-8">
           <h1 className="font-serif text-2xl font-semibold text-ink">Admin Login</h1>
           <input
@@ -233,6 +233,9 @@ export default function Admin() {
           <button type="submit" className="btn-pill-lime w-full justify-center">Log In</button>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
+        <Link to="/" className="text-sm font-semibold text-ink/50 hover:text-ink">
+          &larr; Back to Site
+        </Link>
       </div>
     );
   }
@@ -241,7 +244,10 @@ export default function Admin() {
     <div className="container-x py-12">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-semibold text-ink sm:text-3xl">Admin Dashboard</h1>
-        <button onClick={logout} className="btn-pill-outline !py-2 !text-xs">Log Out</button>
+        <div className="flex items-center gap-3">
+          <Link to="/" className="btn-pill-outline !py-2 !text-xs">View Site</Link>
+          <button onClick={logout} className="btn-pill-outline !py-2 !text-xs">Log Out</button>
+        </div>
       </div>
 
       <div className="mb-10 flex gap-2 overflow-x-auto border-b border-ink/10 pb-px">
