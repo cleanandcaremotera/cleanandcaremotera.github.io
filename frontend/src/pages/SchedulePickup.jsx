@@ -5,6 +5,7 @@ import { api } from "../api.js";
 import { ContactInfoSidebar, FormHeader, IconField, inputClass } from "../components/FormParts.jsx";
 import LocationPickerModal from "../components/LocationPickerModal.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
+import { dayKey } from "../lib/analytics.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendPickupViaWhatsApp } from "../lib/whatsapp.js";
 
@@ -186,6 +187,7 @@ export default function SchedulePickup() {
               <IconField label="Preferred Date" icon={Calendar}>
                 <input
                   type="date"
+                  min={dayKey()}
                   className={inputClass}
                   value={pickupForm.preferredDate}
                   onChange={(e) => setPickupForm({ ...pickupForm, preferredDate: e.target.value })}

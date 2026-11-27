@@ -60,6 +60,54 @@ function CategoryEditor({ category, onSave }) {
   );
 }
 
+// Lets the admin actually see what a bulk Excel import is about to write —
+// not just a count — before confirming a replace that can't be undone.
+// Read-only, scrollable so a large file (dozens of items) doesn't blow up
+// the page.
+function ImportPreviewTable({ categories, extras, discount }) {
+  return (
+    <div className="mt-3 max-h-80 space-y-4 overflow-y-auto rounded-xl border border-ink/10 bg-white p-4">
+      {discount && (
+        <div className="border-b border-ink/10 pb-3 text-sm">
+          <p className="font-semibold text-ink">Discount</p>
+          <p className="text-ink/60">
+            {discount.active ? "Active" : "Inactive"} &middot; {discount.percent}% off
+            {discount.label ? ` — ${discount.label}` : ""}
+          </p>
+        </div>
+      )}
+      {categories.map((cat) => (
+        <div key={cat.key}>
+          <p className="mb-1.5 text-sm font-semibold text-ink">{cat.category}</p>
+          <div className="space-y-1">
+            {cat.items.map((it) => (
+              <div key={it.item} className="flex items-center justify-between gap-3 text-xs text-ink/70">
+                <span className="min-w-0 flex-1 truncate">{it.item}</span>
+                <span className="flex-shrink-0">
+                  DC: {it.dc ?? "—"} &middot; SI: {it.si ?? "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {extras.map((group) => (
+        <div key={group.key}>
+          <p className="mb-1.5 text-sm font-semibold text-ink">{group.label}</p>
+          <div className="space-y-1">
+            {group.rows.map((row) => (
+              <div key={row.service} className="flex items-center justify-between gap-3 text-xs text-ink/70">
+                <span className="min-w-0 flex-1 truncate">{row.service}</span>
+                <span className="flex-shrink-0">&#8377;{row.price}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ExtrasEditor({ rows, onSave }) {
   const [localRows, setLocalRows] = useState(rows);
   const [status, setStatus] = useState(null);
@@ -322,9 +370,14 @@ export default function AdminPricing() {
           <div className="mt-4 rounded-xl border border-lime-dark/30 bg-lime/10 p-4">
             <p className="mb-3 text-sm font-semibold text-ink">
               Replace all current rates with this file? This can't be undone (download today's rates first if you
-              want a backup).
+              want a backup). Review exactly what's in the file below before confirming.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <ImportPreviewTable
+              categories={pendingImport.categories}
+              extras={pendingImport.extras}
+              discount={pendingImport.discount}
+            />
+            <div className="mt-4 flex flex-wrap gap-3">
               <button onClick={confirmImport} className="btn-pill-lime !py-1.5 !text-xs">
                 Confirm &amp; Replace All Rates
               </button>

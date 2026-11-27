@@ -4,10 +4,20 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 const CartContext = createContext(null);
 const STORAGE_KEY = "cc_cart";
 
+// Defensive against anything that could be sitting in localStorage other
+// than what this app itself wrote — a stale schema from before `qty`
+// existed, manual tampering, or plain corruption. Anything that doesn't
+// look like a real line item is dropped rather than crashing every page
+// that reads the cart (CartProvider wraps the whole app).
 function loadCart() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((l) => l && typeof l.key === "string" && typeof l.item === "string")
+      .map((l) => ({ ...l, price: Number(l.price) || 0, qty: Number(l.qty) > 0 ? Number(l.qty) : 1 }));
   } catch {
     return [];
   }
