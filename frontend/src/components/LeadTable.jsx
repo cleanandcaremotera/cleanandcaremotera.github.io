@@ -70,11 +70,23 @@ export function DetailField({ label, children }) {
   );
 }
 
+function formatRowTimestamp(ts) {
+  if (!ts?.toDate) return null;
+  return ts.toDate().toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function LeadRow({
   item,
   renderTitle,
   renderSubtitle,
-  renderBadge,
+  renderIcon,
+  renderMeta,
   renderDetails,
   hasStatus,
   onStatusChange,
@@ -85,6 +97,9 @@ function LeadRow({
   onToggleSelect,
 }) {
   const [expanded, setExpanded] = useState(false);
+  const createdLabel = formatRowTimestamp(item.createdAt);
+  const meta = renderMeta ? renderMeta(item) : null;
+  const subtitle = renderSubtitle ? renderSubtitle(item) : null;
 
   return (
     <div
@@ -100,24 +115,42 @@ function LeadRow({
           className="h-4 w-4 flex-shrink-0 rounded border-ink/30"
           aria-label="Select row"
         />
+        {/* Two compact lines (type icon + name, then a meta chip + subtitle)
+            plus a small muted timestamp footer — everything else waits for
+            the tap-to-expand detail panel below. */}
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
         >
-          {renderBadge && <div className="flex-shrink-0">{renderBadge(item)}</div>}
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            {renderIcon && <span className="flex flex-shrink-0 items-center">{renderIcon(item)}</span>}
             <p className="truncate font-medium text-ink">{renderTitle(item)}</p>
-            {renderSubtitle && <p className="truncate text-xs text-ink/50">{renderSubtitle(item)}</p>}
           </div>
-          <ChevronDown
-            className={`h-4 w-4 flex-shrink-0 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`}
-          />
+          {(meta || subtitle) && (
+            <div className="flex min-w-0 items-center gap-1.5">
+              {meta && (
+                <span className="flex-shrink-0 rounded-pill bg-cream px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/60">
+                  {meta}
+                </span>
+              )}
+              {subtitle && <span className="truncate text-xs text-ink/50">{subtitle}</span>}
+            </div>
+          )}
+          {createdLabel && <p className="text-[11px] text-ink/35">{createdLabel}</p>}
         </button>
         <div className="flex flex-shrink-0 items-center gap-2">
           {hasStatus && <StatusSelect status={item.status} onChange={onStatusChange} />}
           {onNotify && <NotifyButton onClick={onNotify} />}
           <ArchiveButton archived={archived} onClick={onArchiveClick} />
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-label={expanded ? "Collapse" : "Expand"}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-ink/40 hover:bg-cream hover:text-ink"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
         </div>
       </div>
       {expanded && (
@@ -139,7 +172,8 @@ export default function LeadTable({
   items,
   renderTitle,
   renderSubtitle,
-  renderBadge,
+  renderIcon,
+  renderMeta,
   renderDetails,
   hasStatus = true,
   onStatusChange,
@@ -230,7 +264,8 @@ export default function LeadTable({
               item={item}
               renderTitle={renderTitle}
               renderSubtitle={renderSubtitle}
-              renderBadge={renderBadge}
+              renderIcon={renderIcon}
+              renderMeta={renderMeta}
               renderDetails={renderDetails}
               hasStatus={hasStatus}
               onStatusChange={(s) => onStatusChange(item.id, s)}

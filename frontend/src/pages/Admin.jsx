@@ -67,20 +67,29 @@ function ServiceTypeFilterBar({ value, onChange }) {
 }
 
 const LEAD_TYPE_META = {
-  service: { label: "Service Booking", icon: CalendarClock, className: "bg-sky-100 text-sky-800" },
-  cart: { label: "Cart Order", icon: ShoppingCart, className: "bg-amber-100 text-amber-800" },
-  pickup: { label: "Pickup Request", icon: Truck, className: "bg-violet-100 text-violet-800" },
+  service: { label: "Service Booking", icon: CalendarClock, iconClassName: "text-sky-600" },
+  cart: { label: "Cart Order", icon: ShoppingCart, iconClassName: "text-amber-600" },
+  pickup: { label: "Pickup Request", icon: Truck, iconClassName: "text-violet-600" },
 };
-function LeadTypeBadge({ type }) {
+// Icon-only type indicator for the compact row (the full label is still
+// in the expanded detail panel and as this icon's title/tooltip).
+function LeadTypeIcon({ type }) {
   const meta = LEAD_TYPE_META[type];
   if (!meta) return null;
   const Icon = meta.icon;
-  return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-pill px-2 py-0.5 text-[11px] font-semibold ${meta.className}`}>
-      <Icon className="h-3 w-3" />
-      {meta.label}
-    </span>
-  );
+  return <Icon className={`h-4 w-4 ${meta.iconClassName}`} aria-label={meta.label} />;
+}
+
+// Short all-caps initials for a service-ish bit of text (e.g. "Dry
+// Cleaning" -> "DC"), used as a compact meta chip on the row summary.
+function initialsOf(text) {
+  if (!text) return "";
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
 }
 
 function FeedbackStars({ rating = 0 }) {
@@ -113,8 +122,20 @@ function serviceLeadTitle(item) {
 function serviceLeadSubtitle(item) {
   return item.phone;
 }
-function serviceLeadBadge(item) {
-  return <LeadTypeBadge type={item.type} />;
+function serviceLeadIcon(item) {
+  return <LeadTypeIcon type={item.type} />;
+}
+// The compact row's meta chip: initials of whatever "service" text this
+// lead type has (a booking's service name, a pickup's requested service,
+// or the first cart item) — a quick visual cue without the full text.
+function serviceLeadMeta(item) {
+  if (item.type === "service") return initialsOf(item.serviceName) || null;
+  if (item.type === "pickup") return initialsOf(item.service) || null;
+  if (item.type === "cart") {
+    const first = (item.items || [])[0];
+    return first ? initialsOf(first.item) : "CART";
+  }
+  return null;
 }
 // Service Bookings, Cart Orders, and Pickup Requests are merged into one
 // list now — each has a different shape, so the expanded detail panel
@@ -182,7 +203,7 @@ function feedbackTitle(f) {
 function feedbackSubtitle(f) {
   return formatDate(f.createdAt);
 }
-function feedbackBadge(f) {
+function feedbackIcon(f) {
   return <FeedbackStars rating={f.rating} />;
 }
 function feedbackDetails(f) {
@@ -794,7 +815,8 @@ export default function Admin() {
                 items={activeServiceLeadsFiltered}
                 renderTitle={serviceLeadTitle}
                 renderSubtitle={serviceLeadSubtitle}
-                renderBadge={serviceLeadBadge}
+                renderIcon={serviceLeadIcon}
+                renderMeta={serviceLeadMeta}
                 renderDetails={serviceLeadDetails}
                 onStatusChange={updateServiceLeadStatus}
                 onNotify={(item) => notifyCustomer(item.type, item)}
@@ -834,7 +856,7 @@ export default function Admin() {
               items={activeFeedback}
               renderTitle={feedbackTitle}
               renderSubtitle={feedbackSubtitle}
-              renderBadge={feedbackBadge}
+              renderIcon={feedbackIcon}
               renderDetails={feedbackDetails}
               hasStatus={false}
               onArchiveToggle={archiveFeedbackItem}
@@ -878,7 +900,8 @@ export default function Admin() {
                     items={archivedServiceLeadsFiltered}
                     renderTitle={serviceLeadTitle}
                     renderSubtitle={serviceLeadSubtitle}
-                    renderBadge={serviceLeadBadge}
+                    renderIcon={serviceLeadIcon}
+                    renderMeta={serviceLeadMeta}
                     renderDetails={serviceLeadDetails}
                     archived
                     onStatusChange={updateServiceLeadStatus}
@@ -900,7 +923,7 @@ export default function Admin() {
                   items={archivedFeedback}
                   renderTitle={feedbackTitle}
                   renderSubtitle={feedbackSubtitle}
-                  renderBadge={feedbackBadge}
+                  renderIcon={feedbackIcon}
                   renderDetails={feedbackDetails}
                   hasStatus={false}
                   archived
