@@ -2,12 +2,24 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebas
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { MessageCircle, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { leadServiceLabel, sendLeadUpdateViaWhatsApp } from "../lib/whatsapp.js";
+
+const TABS = [
+  { id: "offer", label: "Offer" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "contact", label: "Contact Us" },
+  { id: "pricing", label: "Pricing & Discounts" },
+  { id: "service", label: "Service Bookings" },
+  { id: "cart", label: "Cart Orders" },
+  { id: "pickup", label: "Pickup Requests" },
+  { id: "feedback", label: "Feedback" },
+];
 
 const STATUS_OPTIONS = ["new", "pending", "in-progress", "completed", "cancelled"];
 
@@ -81,6 +93,12 @@ export default function Admin() {
   const [offerVisible, setOfferVisible] = useState(false);
   const [offerUrls, setOfferUrls] = useState([]);
   const [offerProgress, setOfferProgress] = useState({ index: 0, total: 0, percent: 0 });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : TABS[0].id;
+  function setActiveTab(id) {
+    setSearchParams({ tab: id });
+  }
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -221,11 +239,29 @@ export default function Admin() {
 
   return (
     <div className="container-x py-12">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-semibold text-ink sm:text-3xl">Admin Dashboard</h1>
         <button onClick={logout} className="btn-pill-outline !py-2 !text-xs">Log Out</button>
       </div>
 
+      <div className="mb-10 flex gap-2 overflow-x-auto border-b border-ink/10 pb-px">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setActiveTab(t.id)}
+            className={`flex-shrink-0 whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+              activeTab === t.id
+                ? "border-b-2 border-lime-dark bg-cream text-ink"
+                : "border-b-2 border-transparent text-ink/50 hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "offer" && (
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Offer Banner</h2>
         <p className="mb-4 text-sm text-ink/60">
@@ -300,11 +336,13 @@ export default function Admin() {
           </form>
         </div>
       </section>
+      )}
 
-      <AdminWhatsAppInbox />
+      {activeTab === "whatsapp" && <AdminWhatsAppInbox />}
 
-      <AdminPricing />
+      {activeTab === "pricing" && <AdminPricing />}
 
+      {activeTab === "service" && (
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Service Bookings</h2>
 
@@ -385,7 +423,9 @@ export default function Admin() {
           </table>
         </div>
       </section>
+      )}
 
+      {activeTab === "cart" && (
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Cart Orders</h2>
 
@@ -446,7 +486,9 @@ export default function Admin() {
           </table>
         </div>
       </section>
+      )}
 
+      {activeTab === "pickup" && (
       <section className="mb-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Pickup Requests</h2>
 
@@ -503,7 +545,9 @@ export default function Admin() {
           </table>
         </div>
       </section>
+      )}
 
+      {activeTab === "contact" && (
       <section>
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Contact Messages</h2>
 
@@ -562,7 +606,9 @@ export default function Admin() {
           </table>
         </div>
       </section>
+      )}
 
+      {activeTab === "feedback" && (
       <section className="mt-12">
         <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Customer Feedback</h2>
 
@@ -608,6 +654,7 @@ export default function Admin() {
           </table>
         </div>
       </section>
+      )}
     </div>
   );
 }
