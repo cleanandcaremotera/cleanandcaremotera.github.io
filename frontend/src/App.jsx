@@ -6,6 +6,7 @@ import Footer from "./components/Footer.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import { CompanyProvider } from "./context/CompanyContext.jsx";
+import { trackVisit } from "./lib/analytics.js";
 import About from "./pages/About.jsx";
 import Admin from "./pages/Admin.jsx";
 import Cart from "./pages/Cart.jsx";
@@ -37,6 +38,19 @@ function GlobalFloatingActions() {
 // The admin dashboard is its own self-contained workspace (own header,
 // own "View Site" link back out) — the customer-facing chrome around it
 // would just be dead weight, not a real nav for an admin to use.
+// Counts once per browser tab (sessionStorage guard) so SPA route changes
+// within the same visit don't inflate the number — and never on /admin, so
+// the business owner's own dashboard use isn't counted as a site visitor.
+function VisitTracker() {
+  useEffect(() => {
+    if (window.location.pathname.startsWith("/admin")) return;
+    if (sessionStorage.getItem("cc_visit_counted")) return;
+    sessionStorage.setItem("cc_visit_counted", "1");
+    trackVisit();
+  }, []);
+  return null;
+}
+
 export default function App() {
   const { pathname } = useLocation();
   const isAdmin = pathname === "/admin";
@@ -45,6 +59,7 @@ export default function App() {
     <CompanyProvider>
       <CartProvider>
         <ScrollToTop />
+        <VisitTracker />
         {!isAdmin && <Navbar />}
         <main>
           <Routes>

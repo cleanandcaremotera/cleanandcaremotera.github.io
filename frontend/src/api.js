@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./lib/firebase.js";
+import { dayKey } from "./lib/analytics.js";
 
 const DEFAULT_DISCOUNT = { active: false, percent: 0, label: "" };
 
@@ -189,5 +190,16 @@ export const api = {
 
   async markWhatsAppArchived(ids, archived) {
     await batchUpdate("whatsappMessages", ids, { archived });
+  },
+
+  // Admin-only (Firestore rules require an authenticated user for this).
+  // Returns each day's visit count from `days` ago through today — days
+  // with zero visits simply have no doc, the caller fills those gaps.
+  async getVisitStats(days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - (days - 1));
+    const q = query(collection(db, "analytics"), where("date", ">=", dayKey(since)), orderBy("date"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data());
   },
 };

@@ -3,7 +3,9 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   Archive as ArchiveIcon,
   CalendarClock,
+  Eye,
   Image as ImageIcon,
+  LineChart,
   Mail,
   MessageCircle,
   ShoppingCart,
@@ -18,10 +20,12 @@ import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
 import LeadTable, { DetailField } from "../components/LeadTable.jsx";
+import MiniBarChart from "../components/MiniBarChart.jsx";
 import NotifyPreviewModal from "../components/NotifyPreviewModal.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { img } from "../lib/assets.js";
+import { dayKey } from "../lib/analytics.js";
 import { buildLeadUpdateMessage, leadServiceLabel, sendWhatsAppToLead } from "../lib/whatsapp.js";
 
 // Order here is also the tab-bar display order, and TABS[0] is the tab
@@ -38,8 +42,58 @@ const TABS = [
   { id: "contact", label: "Contact Us", icon: Mail },
   { id: "feedback", label: "Feedback", icon: Star },
   { id: "offer", label: "Offer", icon: ImageIcon },
+  { id: "performance", label: "Performance", icon: LineChart },
   { id: "archive", label: "Archive", icon: ArchiveIcon },
 ];
+
+// Oldest-to-newest array of "YYYY-MM-DD" keys ending today, in the
+// business's own timezone (see lib/analytics.js' dayKey) — the x-axis for
+// every Performance tab chart.
+function buildDayRange(days) {
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    out.push(dayKey(d));
+  }
+  return out;
+}
+
+// Buckets a list of leads (or any item with a Firestore `createdAt`) into
+// a { "YYYY-MM-DD": count } map. Items missing a resolved timestamp (a
+// write still in flight) are skipped rather than mis-bucketed.
+function countByDay(items) {
+  const map = {};
+  items.forEach((item) => {
+    if (!item.createdAt?.toDate) return;
+    const key = dayKey(item.createdAt.toDate());
+    map[key] = (map[key] || 0) + 1;
+  });
+  return map;
+}
+
+function formatShortDate(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function PerfCard({ title, icon: Icon, today, total, rangeDays, series, colorClassName }) {
+  return (
+    <div className="rounded-2xl border border-ink/10 bg-white p-5">
+      <div className="flex items-center gap-2 text-ink/50">
+        <Icon className="h-4 w-4" />
+        <p className="text-xs font-semibold uppercase tracking-wide">{title}</p>
+      </div>
+      <p className="mt-2 font-serif text-3xl font-semibold text-ink">{total}</p>
+      <p className="text-xs text-ink/40">
+        last {rangeDays} days &middot; {today} today
+      </p>
+      <div className="mt-4">
+        <MiniBarChart data={series} colorClassName={colorClassName} />
+      </div>
+    </div>
+  );
+}
 
 const SERVICE_TYPE_FILTERS = [
   { id: "all", label: "All Types" },
@@ -252,6 +306,9 @@ export default function Admin() {
   const [whatsappMessages, setWhatsappMessages] = useState([]);
   const [whatsappLoading, setWhatsappLoading] = useState(true);
   const [notifyPreview, setNotifyPreview] = useState(null); // { type, lead, feedbackUrl } | null
+
+  const [visitStats, setVisitStats] = useState([]); // [{ date, visits }]
+  const [perfRange, setPerfRange] = useState(14); // 7 | 14 | 30 (days shown in the Performance tab)
 
   const [offerFiles, setOfferFiles] = useState([]);
   const [offerStatus, setOfferStatus] = useState(null);
@@ -629,6 +686,7 @@ export default function Admin() {
     api.getLeadsByType("service").then(setBookings);
     api.getFeedback().then(setFeedback);
     api.getWhatsAppMessages().then(setWhatsappMessages).catch(() => {}).finally(() => setWhatsappLoading(false));
+    api.getVisitStats(30).then(setVisitStats).catch(() => {});
   }, [user]);
 
   if (user === undefined) {
@@ -671,6 +729,23 @@ export default function Admin() {
       </div>
     );
   }
+
+  const perfSeries = (() => {
+    const range = buildDayRange(perfRange);
+    const visitMap = Object.fromEntries(visitStats.map((v) => [v.date, v.visits]));
+    const orderMap = countByDay([...pickups, ...cartOrders, ...bookings]);
+    const enquiryMap = countByDay(contacts);
+    const today = dayKey();
+
+    const toSeries = (map) => range.map((key) => ({ label: formatShortDate(key), value: map[key] || 0 }));
+    const total = (map) => range.reduce((sum, key) => sum + (map[key] || 0), 0);
+
+    return {
+      visits: { series: toSeries(visitMap), total: total(visitMap), today: visitMap[today] || 0 },
+      orders: { series: toSeries(orderMap), total: total(orderMap), today: orderMap[today] || 0 },
+      enquiries: { series: toSeries(enquiryMap), total: total(enquiryMap), today: enquiryMap[today] || 0 },
+    };
+  })();
 
   return (
     <>
@@ -808,6 +883,63 @@ export default function Admin() {
                   {offerStatus?.error && <p className="text-sm text-red-600">{offerStatus.error}</p>}
                 </form>
               </div>
+            </section>
+          )}
+
+          {activeTab === "performance" && (
+            <section>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-serif text-xl font-semibold text-ink">Performance</h2>
+                <div className="flex gap-1.5 rounded-pill bg-white p-1 shadow-sm">
+                  {[7, 14, 30].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setPerfRange(d)}
+                      className={`rounded-pill px-3 py-1 text-xs font-semibold transition-colors ${
+                        perfRange === d ? "bg-ink text-white" : "text-ink/50 hover:text-ink"
+                      }`}
+                    >
+                      {d}D
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <PerfCard
+                  title="Visitors"
+                  icon={Eye}
+                  total={perfSeries.visits.total}
+                  today={perfSeries.visits.today}
+                  rangeDays={perfRange}
+                  series={perfSeries.visits.series}
+                  colorClassName="bg-sky-400"
+                />
+                <PerfCard
+                  title="Orders"
+                  icon={ShoppingCart}
+                  total={perfSeries.orders.total}
+                  today={perfSeries.orders.today}
+                  rangeDays={perfRange}
+                  series={perfSeries.orders.series}
+                  colorClassName="bg-lime-dark"
+                />
+                <PerfCard
+                  title="Enquiries"
+                  icon={Mail}
+                  total={perfSeries.enquiries.total}
+                  today={perfSeries.enquiries.today}
+                  rangeDays={perfRange}
+                  series={perfSeries.enquiries.series}
+                  colorClassName="bg-amber-400"
+                />
+              </div>
+
+              <p className="mt-4 text-xs text-ink/40">
+                Orders combines Service Bookings, Cart Orders, and Pickup Requests. Enquiries counts Contact Us
+                messages. Visitors counts one per browser session on the public site (admin use isn't counted).
+              </p>
             </section>
           )}
 
