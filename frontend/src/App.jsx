@@ -24,9 +24,10 @@ function ScrollToTop() {
   return null;
 }
 
-// Hidden on /admin (not customer-facing) and on each form's own
-// destination page.
-const HIDE_FAB_ON = ["/admin", "/contact", "/schedule-pickup"];
+// Hidden on /admin (not customer-facing), on each form's own destination
+// page, and on /pricing (which shows its own cart-aware floating actions
+// instead — see Pricing.jsx).
+const HIDE_FAB_ON = ["/admin", "/contact", "/schedule-pickup", "/pricing"];
 function GlobalFloatingActions() {
   const { pathname } = useLocation();
   if (HIDE_FAB_ON.includes(pathname)) return null;

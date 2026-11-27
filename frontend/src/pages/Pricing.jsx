@@ -1,4 +1,17 @@
-import { ArrowLeft, Baby, Footprints, Home as HomeIcon, Percent, Plus, Scale, Shirt, Sparkles, SprayCan } from "lucide-react";
+import {
+  ArrowLeft,
+  Baby,
+  ChevronDown,
+  Footprints,
+  Home as HomeIcon,
+  Percent,
+  Plus,
+  Scale,
+  Shirt,
+  ShoppingCart,
+  Sparkles,
+  SprayCan,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -61,88 +74,71 @@ function keyFor(item, service) {
   return `${item}__${service}`;
 }
 
-// Tap a rate to add one (the badge on its corner tracks the running
-// count — tap the badge to remove one), browse and tap as many
-// items/services as needed, then one "Add to Cart" commits everything
-// at once instead of confirming each item separately.
-function PriceTable({ title, items }) {
-  const { addItem } = useCart();
-  const [qtyByKey, setQtyByKey] = useState({});
-
-  useEffect(() => {
-    setQtyByKey({});
-  }, [items]);
-
-  function bump(item, service, delta) {
-    const key = keyFor(item, service);
-    setQtyByKey((prev) => {
-      const next = Math.max(0, (prev[key] || 0) + delta);
-      return { ...prev, [key]: next };
-    });
-  }
-
-  const totalSelected = Object.values(qtyByKey).reduce((sum, q) => sum + q, 0);
-  const totalPrice = items.reduce((sum, row) => {
-    const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
-    const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
-    return sum + dcQty * (row.dc || 0) + siQty * (row.si || 0);
-  }, 0);
-
-  function handleAddToCart() {
-    items.forEach((row) => {
-      const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
-      if (dcQty > 0) addItem({ item: row.item, service: "dc", price: row.dc, qty: dcQty });
-      const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
-      if (siQty > 0) addItem({ item: row.item, service: "si", price: row.si, qty: siQty });
-    });
-    setQtyByKey({});
-  }
+// Compact by default — just the item name and a running-qty badge if
+// anything's selected. Tap to expand and reveal the Dry Clean / Steam
+// Iron rate chips (same tap-to-add, tap-badge-to-remove pattern).
+function PriceRow({ row, qtyByKey, onBump }) {
+  const [expanded, setExpanded] = useState(false);
+  const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
+  const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
+  const rowQty = dcQty + siQty;
 
   return (
-    <div>
-      {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
-
-      <div className="space-y-3">
-        {items.map((row) => (
-          <div
-            key={row.item}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 p-4"
-          >
-            <p className="font-medium text-ink">{row.item}</p>
-            <div className="flex flex-wrap gap-3">
-              {row.dc != null && (
-                <RateChip
-                  label="Dry Clean"
-                  price={row.dc}
-                  qty={qtyByKey[keyFor(row.item, "dc")] || 0}
-                  onAdd={() => bump(row.item, "dc", 1)}
-                  onRemove={() => bump(row.item, "dc", -1)}
-                />
-              )}
-              {row.si != null && (
-                <RateChip
-                  label="Steam Iron"
-                  price={row.si}
-                  qty={qtyByKey[keyFor(row.item, "si")] || 0}
-                  onAdd={() => bump(row.item, "si", 1)}
-                  onRemove={() => bump(row.item, "si", -1)}
-                />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {totalSelected > 0 && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-ink px-6 py-4 text-white">
-          <p className="text-sm font-medium">
-            {totalSelected} item{totalSelected > 1 ? "s" : ""} selected &middot; &#8377;{totalPrice}
-          </p>
-          <button onClick={handleAddToCart} className="btn-pill-lime !py-2 !text-xs">
-            <Plus className="h-3.5 w-3.5" /> Add to Cart
-          </button>
+    <div
+      className={`overflow-hidden rounded-xl border transition-colors ${
+        rowQty > 0 ? "border-lime-dark bg-lime/5" : "border-ink/10 bg-white"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+      >
+        <p className="font-medium text-ink">{row.item}</p>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {rowQty > 0 && (
+            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-lime-dark px-1 text-[11px] font-bold text-white">
+              {rowQty}
+            </span>
+          )}
+          <ChevronDown className={`h-4 w-4 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+      {expanded && (
+        <div className="flex flex-wrap gap-3 border-t border-ink/10 px-4 pb-4 pt-3">
+          {row.dc != null && (
+            <RateChip
+              label="Dry Clean"
+              price={row.dc}
+              qty={dcQty}
+              onAdd={() => onBump(row.item, "dc", 1)}
+              onRemove={() => onBump(row.item, "dc", -1)}
+            />
+          )}
+          {row.si != null && (
+            <RateChip
+              label="Steam Iron"
+              price={row.si}
+              qty={siQty}
+              onAdd={() => onBump(row.item, "si", 1)}
+              onRemove={() => onBump(row.item, "si", -1)}
+            />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Plain list rendering — the actual pending-quantity state lives in the
+// parent Pricing component so the page-level floating "Add to Cart"
+// button can read and act on it too.
+function PriceTable({ items, qtyByKey, onBump }) {
+  return (
+    <div className="space-y-2">
+      {items.map((row) => (
+        <PriceRow key={row.item} row={row} qtyByKey={qtyByKey} onBump={onBump} />
+      ))}
     </div>
   );
 }
@@ -227,6 +223,25 @@ export default function Pricing() {
   const [rateList, setRateList] = useState(null);
   const [params, setParams] = useSearchParams();
   const activeKey = params.get("category");
+  const { addItem, count: cartCount, total: cartTotal } = useCart();
+
+  // Pending (not-yet-added) quantities for the currently open category's
+  // PriceTable — lives here, not inside PriceTable, so the floating
+  // "Add to Cart" button at the bottom of the page can read and act on
+  // it too.
+  const [qtyByKey, setQtyByKey] = useState({});
+
+  useEffect(() => {
+    setQtyByKey({});
+  }, [activeKey]);
+
+  function bump(item, service, delta) {
+    const key = keyFor(item, service);
+    setQtyByKey((prev) => {
+      const next = Math.max(0, (prev[key] || 0) + delta);
+      return { ...prev, [key]: next };
+    });
+  }
 
   useEffect(() => {
     api.getPricing().then(setData).catch(() => {});
@@ -258,6 +273,24 @@ export default function Pricing() {
   ];
 
   const activeTile = tiles.find((t) => t.key === activeKey) || null;
+  const categoryItems = activeTile?.type === "table" ? activeTile.items : [];
+
+  const pendingCount = Object.values(qtyByKey).reduce((sum, q) => sum + q, 0);
+  const pendingTotal = categoryItems.reduce((sum, row) => {
+    const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
+    const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
+    return sum + dcQty * (row.dc || 0) + siQty * (row.si || 0);
+  }, 0);
+
+  function handleAddToCart() {
+    categoryItems.forEach((row) => {
+      const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
+      if (dcQty > 0) addItem({ item: row.item, service: "dc", price: row.dc, qty: dcQty });
+      const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
+      if (siQty > 0) addItem({ item: row.item, service: "si", price: row.si, qty: siQty });
+    });
+    setQtyByKey({});
+  }
 
   function openCategory(key) {
     setParams({ category: key });
@@ -334,7 +367,7 @@ export default function Pricing() {
             <SectionHeading eyebrow="Pricing" title={activeTile.label} />
             <div className="mt-10">
               {activeTile.type === "table" ? (
-                <PriceTable items={activeTile.items} />
+                <PriceTable items={activeTile.items} qtyByKey={qtyByKey} onBump={bump} />
               ) : (
                 <SimpleTable rows={activeTile.rows} labelKey="service" valueKey="price" />
               )}
@@ -354,6 +387,37 @@ export default function Pricing() {
           <Link to="/schedule-pickup" className="btn-pill-lime whitespace-nowrap">Schedule Pickup</Link>
         </div>
       </section>
+
+      {/* Replaces the site's usual floating Contact Us / Schedule Pickup
+          buttons on this page (see App.jsx's HIDE_FAB_ON) with whatever's
+          actually relevant here: the pending selection in the open
+          category, and the cart itself. */}
+      {(pendingCount > 0 || cartCount > 0) && (
+        <div
+          className="fixed right-4 z-40 flex flex-col items-end gap-3 lg:right-6"
+          style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 16px)" }}
+        >
+          {pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex items-center gap-2 rounded-pill bg-lime px-4 py-2.5 text-sm font-semibold text-ink shadow-lg transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add to Cart &middot; {pendingCount} &middot; &#8377;{pendingTotal}
+            </button>
+          )}
+          {cartCount > 0 && (
+            <Link
+              to="/cart"
+              className="flex items-center gap-2 rounded-pill bg-white px-4 py-2.5 text-sm font-semibold text-ink shadow-lg ring-1 ring-ink/10 transition-transform hover:-translate-y-0.5"
+            >
+              <ShoppingCart className="h-4 w-4 text-ink/70" />
+              Cart &middot; &#8377;{cartTotal} ({cartCount})
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
