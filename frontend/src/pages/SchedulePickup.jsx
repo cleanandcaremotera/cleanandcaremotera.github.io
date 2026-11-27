@@ -6,6 +6,7 @@ import { ContactInfoSidebar, FormHeader, IconField, inputClass } from "../compon
 import MapLoadingOverlay from "../components/MapLoadingOverlay.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
 import { dayKey } from "../lib/analytics.js";
+import { useHoneypot } from "../lib/honeypot.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendPickupViaWhatsApp } from "../lib/whatsapp.js";
 
@@ -46,6 +47,7 @@ export default function SchedulePickup() {
   const [pickupStatus, setPickupStatus] = useState(null);
   const [location, setLocation] = useState(null); // { lat, lng, url, address } | null
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const { honeypotFieldProps, isBot } = useHoneypot();
 
   function handleLocationConfirm(loc) {
     setLocation(loc);
@@ -56,6 +58,19 @@ export default function SchedulePickup() {
 
   function submitPickup(e) {
     e.preventDefault();
+    if (isBot()) {
+      setPickupStatus({ success: "Opening WhatsApp — just hit send there to confirm your pickup." });
+      setPickupForm({
+        name: "",
+        phone: "",
+        address: "",
+        service: SERVICE_TYPE_OPTIONS[0],
+        preferredDate: "",
+        preferredTime: "",
+      });
+      setLocation(null);
+      return;
+    }
     if (!isValidPhone(pickupForm.phone)) {
       setPickupStatus({ error: "Enter a valid 10-digit mobile number." });
       return;
@@ -116,6 +131,7 @@ export default function SchedulePickup() {
           </div>
 
           <form onSubmit={submitPickup} className="space-y-4">
+            <input type="text" {...honeypotFieldProps} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <IconField label="Name" icon={User}>
                 <input

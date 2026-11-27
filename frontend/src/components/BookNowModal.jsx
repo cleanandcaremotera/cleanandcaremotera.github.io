@@ -1,6 +1,7 @@
 import { CheckCircle2, MapPin, X } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { api } from "../api.js";
+import { useHoneypot } from "../lib/honeypot.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendServiceBookingViaWhatsApp } from "../lib/whatsapp.js";
 import MapLoadingOverlay from "./MapLoadingOverlay.jsx";
@@ -18,6 +19,7 @@ export default function BookNowModal({ service, onClose }) {
   const [status, setStatus] = useState(null);
   const [location, setLocation] = useState(null); // { lat, lng, url, address } | null
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const { honeypotFieldProps, isBot } = useHoneypot();
 
   function handleLocationConfirm(loc) {
     setLocation(loc);
@@ -28,6 +30,10 @@ export default function BookNowModal({ service, onClose }) {
 
   function submit(e) {
     e.preventDefault();
+    if (isBot()) {
+      setStatus({ success: "Opening WhatsApp — just hit send there to confirm your booking." });
+      return;
+    }
     if (!isValidPhone(form.phone)) {
       setStatus({ error: "Enter a valid 10-digit mobile number." });
       return;
@@ -80,6 +86,7 @@ export default function BookNowModal({ service, onClose }) {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <input type="text" {...honeypotFieldProps} />
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-ink/80">Name</span>
               <input

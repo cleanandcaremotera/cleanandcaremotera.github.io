@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../api.js";
 import { ContactInfoSidebar, FormHeader, IconField, inputClass } from "../components/FormParts.jsx";
 import { useCompany } from "../context/CompanyContext.jsx";
+import { useHoneypot } from "../lib/honeypot.js";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendContactViaWhatsApp } from "../lib/whatsapp.js";
 
@@ -10,9 +11,15 @@ export default function Contact() {
   const { company } = useCompany();
   const [contactForm, setContactForm] = useState({ name: "", phone: "", email: "", message: "" });
   const [contactStatus, setContactStatus] = useState(null);
+  const { honeypotFieldProps, isBot } = useHoneypot();
 
   function submitContact(e) {
     e.preventDefault();
+    if (isBot()) {
+      setContactStatus({ success: "Opening WhatsApp — just hit send there to reach us." });
+      setContactForm({ name: "", phone: "", email: "", message: "" });
+      return;
+    }
     if (!isValidPhone(contactForm.phone)) {
       setContactStatus({ error: "Enter a valid 10-digit mobile number." });
       return;
@@ -41,6 +48,7 @@ export default function Contact() {
           <FormHeader icon={MessageSquare} title="Send a Message" subtitle="We typically reply within a few hours." />
 
           <form onSubmit={submitContact} className="space-y-4">
+            <input type="text" {...honeypotFieldProps} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <IconField label="Name" icon={User}>
                 <input

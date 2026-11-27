@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useCart } from "../context/CartContext.jsx";
+import { useHoneypot } from "../lib/honeypot.js";
 import { sendCartOrderViaWhatsApp } from "../lib/whatsapp.js";
 
 const inputClass =
@@ -26,6 +27,7 @@ export default function Cart() {
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [status, setStatus] = useState(null);
   const [discount, setDiscount] = useState(null);
+  const { honeypotFieldProps, isBot } = useHoneypot();
 
   useEffect(() => {
     api.getDiscount().then(setDiscount).catch(() => {});
@@ -37,6 +39,12 @@ export default function Cart() {
 
   function checkout(e) {
     e.preventDefault();
+    if (isBot()) {
+      setStatus({ success: "Opening WhatsApp — confirm your order there to finish." });
+      clearCart();
+      setForm({ name: "", phone: "", address: "" });
+      return;
+    }
     const payload = {
       ...form,
       items,
@@ -145,6 +153,7 @@ export default function Cart() {
           </div>
 
           <form onSubmit={checkout} className="space-y-4 rounded-2xl border border-ink/10 p-6">
+            <input type="text" {...honeypotFieldProps} />
             <h3 className="font-serif text-xl font-semibold text-ink">Your Details</h3>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-ink/80">Name</span>

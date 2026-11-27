@@ -2,6 +2,36 @@ import { Star } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { useHoneypot } from "../lib/honeypot.js";
+
+// Each feedback link is tied to one order/booking (the `lead` param) — once
+// submitted from this browser, remember it so re-opening the same link
+// (easy to do by accident from a chat history) doesn't file a second,
+// duplicate feedback entry for the same order.
+const SUBMITTED_KEY = "cc_feedback_submitted";
+
+function hasSubmitted(leadId) {
+  if (!leadId) return false;
+  try {
+    const ids = JSON.parse(localStorage.getItem(SUBMITTED_KEY) || "[]");
+    return Array.isArray(ids) && ids.includes(leadId);
+  } catch {
+    return false;
+  }
+}
+
+function markSubmitted(leadId) {
+  if (!leadId) return;
+  try {
+    const ids = JSON.parse(localStorage.getItem(SUBMITTED_KEY) || "[]");
+    const list = Array.isArray(ids) ? ids : [];
+    if (!list.includes(leadId)) {
+      localStorage.setItem(SUBMITTED_KEY, JSON.stringify([...list, leadId]));
+    }
+  } catch {
+    // Non-critical — worst case, this one link can be submitted again.
+  }
+}
 
 export default function Feedback() {
   const [params] = useSearchParams();
@@ -11,13 +41,19 @@ export default function Feedback() {
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState(() => (hasSubmitted(leadId) ? { success: true, already: true } : null));
+  const { honeypotFieldProps, isBot } = useHoneypot();
 
   async function submit(e) {
     e.preventDefault();
+    if (isBot()) {
+      setStatus({ success: true });
+      return;
+    }
     setStatus({ loading: true });
     try {
       await api.submitFeedback({ leadId, service, rating, comment });
+      markSubmitted(leadId);
       setStatus({ success: true });
     } catch (err) {
       setStatus({ error: err.message });
@@ -29,7 +65,9 @@ export default function Feedback() {
       <div className="container-x flex min-h-[60vh] items-center justify-center py-16 text-center">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-ink">Thank you!</h1>
-          <p className="mt-2 text-ink/60">Your feedback helps us improve.</p>
+          <p className="mt-2 text-ink/60">
+            {status.already ? "You've already shared feedback for this order." : "Your feedback helps us improve."}
+          </p>
         </div>
       </div>
     );
@@ -38,6 +76,7 @@ export default function Feedback() {
   return (
     <div className="container-x flex min-h-[60vh] items-center justify-center py-16">
       <form onSubmit={submit} className="w-full max-w-md space-y-5 rounded-2xl border border-ink/10 p-8">
+        <input type="text" {...honeypotFieldProps} />
         <div>
           <p className="eyebrow">Feedback</p>
           <h1 className="font-serif text-2xl font-semibold text-ink">

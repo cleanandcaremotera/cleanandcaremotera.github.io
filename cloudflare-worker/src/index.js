@@ -70,7 +70,17 @@ async function handleIncoming(request, env) {
   const messages = extractMessages(payload);
   if (messages.length > 0) {
     const token = await getAccessToken(env);
-    await Promise.all(messages.map((m) => writeMessage(m, env, token)));
+    // allSettled, not all: one message's write failing shouldn't throw away
+    // the whole batch. If this used Promise.all, a single failure would
+    // reject before Meta gets its 200, so Meta retries the *entire*
+    // payload — including messages that already wrote fine — duplicating
+    // them in the inbox. Each message is independent; handle them that way.
+    const results = await Promise.allSettled(messages.map((m) => writeMessage(m, env, token)));
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(`Failed to write message ${messages[i].id}:`, r.reason);
+      }
+    });
   }
 
   // Meta just needs a fast 200 — it retries on anything else.
