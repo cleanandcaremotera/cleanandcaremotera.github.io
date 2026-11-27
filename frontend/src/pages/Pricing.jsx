@@ -16,31 +16,11 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import OfferCarousel from "../components/OfferCarousel.jsx";
-import QtyPromptModal from "../components/QtyPromptModal.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { img } from "../lib/assets.js";
 
-const selectClass =
-  "w-full rounded-lg border border-ink/15 px-4 py-3 text-sm outline-none focus:border-lime-dark focus:ring-2 focus:ring-lime/30";
-
-// A single item's rate(s), shown after it's picked from the dropdown below —
-// each rate opens the qty prompt rather than adding straight to cart.
-function RateRow({ label, price, onAdd }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-ink/10 p-4 last:border-0">
-      <div>
-        <p className="font-medium text-ink">{label}</p>
-        <p className="text-sm text-ink/60">&#8377;{price} / item</p>
-      </div>
-      <button onClick={onAdd} className="btn-pill-lime !py-2 !text-xs">
-        <Plus className="h-3.5 w-3.5" /> Add to Cart
-      </button>
-    </div>
-  );
-}
-
-// A rate the admin can tap repeatedly to build up a quantity before
+// A rate the customer can tap repeatedly to build up a quantity before
 // committing anything to the cart — a small circular badge on the corner
 // shows the running count; tapping the badge itself removes one.
 function RateChip({ label, price, qty, onAdd, onRemove }) {
@@ -75,13 +55,13 @@ function keyFor(item, service) {
 }
 
 // Compact by default — just the item name and a running-qty badge if
-// anything's selected. Tap to expand and reveal the Dry Clean / Steam
-// Iron rate chips (same tap-to-add, tap-badge-to-remove pattern).
-function PriceRow({ row, qtyByKey, onBump }) {
+// anything's selected. Tap to expand and reveal its rate chip(s) (same
+// tap-to-add, tap-badge-to-remove pattern) — one Dry Clean/Steam Iron pair
+// for a category item, or a single rate for an extras-group row. Same
+// component either way, so every category on this page behaves identically.
+function PriceRow({ label, rates, qtyByKey, onBump }) {
   const [expanded, setExpanded] = useState(false);
-  const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
-  const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
-  const rowQty = dcQty + siQty;
+  const rowQty = rates.reduce((sum, r) => sum + (qtyByKey[r.key] || 0), 0);
 
   return (
     <div
@@ -94,7 +74,7 @@ function PriceRow({ row, qtyByKey, onBump }) {
         onClick={() => setExpanded((e) => !e)}
         className="flex w-full items-center justify-between gap-3 p-4 text-left"
       >
-        <p className="font-medium text-ink">{row.item}</p>
+        <p className="font-medium text-ink">{label}</p>
         <div className="flex flex-shrink-0 items-center gap-2">
           {rowQty > 0 && (
             <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-lime-dark px-1 text-[11px] font-bold text-white">
@@ -106,24 +86,16 @@ function PriceRow({ row, qtyByKey, onBump }) {
       </button>
       {expanded && (
         <div className="flex flex-wrap gap-3 border-t border-ink/10 px-4 pb-4 pt-3">
-          {row.dc != null && (
+          {rates.map((r) => (
             <RateChip
-              label="Dry Clean"
-              price={row.dc}
-              qty={dcQty}
-              onAdd={() => onBump(row.item, "dc", 1)}
-              onRemove={() => onBump(row.item, "dc", -1)}
+              key={r.key}
+              label={r.label}
+              price={r.price}
+              qty={qtyByKey[r.key] || 0}
+              onAdd={() => onBump(r.key, 1)}
+              onRemove={() => onBump(r.key, -1)}
             />
-          )}
-          {row.si != null && (
-            <RateChip
-              label="Steam Iron"
-              price={row.si}
-              qty={siQty}
-              onAdd={() => onBump(row.item, "si", 1)}
-              onRemove={() => onBump(row.item, "si", -1)}
-            />
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -133,70 +105,43 @@ function PriceRow({ row, qtyByKey, onBump }) {
 // Plain list rendering — the actual pending-quantity state lives in the
 // parent Pricing component so the page-level floating "Add to Cart"
 // button can read and act on it too.
-function PriceTable({ items, qtyByKey, onBump }) {
+function CategoryList({ rows, qtyByKey, onBump }) {
   return (
     <div className="space-y-2">
-      {items.map((row) => (
-        <PriceRow key={row.item} row={row} qtyByKey={qtyByKey} onBump={onBump} />
+      {rows.map((row) => (
+        <PriceRow key={row.label} label={row.label} rates={row.rates} qtyByKey={qtyByKey} onBump={onBump} />
       ))}
     </div>
   );
 }
 
-// Same dropdown-then-qty-prompt pattern for extras groups (By Weight,
-// Shoes Spa, Add-Ons), which only have one rate per row instead of a
-// Dry Clean / Steam Iron split.
-function SimpleTable({ title, rows, labelKey, valueKey }) {
-  const { addItem } = useCart();
-  const [selected, setSelected] = useState(rows[0]?.[labelKey] || "");
-  const [pendingAdd, setPendingAdd] = useState(null);
-
-  useEffect(() => {
-    setSelected(rows[0]?.[labelKey] || "");
-  }, [rows, labelKey]);
-
-  const row = rows.find((r) => r[labelKey] === selected);
-  const priceValue = row ? Number.parseInt(row[valueKey], 10) : NaN;
-  const canAdd = row && !Number.isNaN(priceValue);
-
-  return (
-    <div>
-      {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
-
-      <label className="block">
-        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose a service</span>
-        <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClass}>
-          {rows.map((r) => (
-            <option key={r[labelKey]} value={r[labelKey]}>
-              {r[labelKey]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {canAdd && (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-ink/10">
-          <RateRow
-            label={row[labelKey]}
-            price={priceValue}
-            onAdd={() => setPendingAdd({ item: row[labelKey], service: "dc", price: priceValue })}
-          />
-        </div>
-      )}
-
-      {pendingAdd && (
-        <QtyPromptModal
-          item={pendingAdd.item}
-          price={pendingAdd.price}
-          onConfirm={(qty) => {
-            addItem({ ...pendingAdd, qty });
-            setPendingAdd(null);
-          }}
-          onCancel={() => setPendingAdd(null)}
-        />
-      )}
-    </div>
-  );
+// Normalizes a tile's rows into one consistent shape — { label, rates }, with
+// `rates` being one or two { key, label, service, price } entries — so a
+// category's Dry Clean/Steam Iron items and an extras group's single-rate
+// rows (By Weight, Shoes Spa, Add-Ons) run through the exact same list,
+// row, and cart-building logic below.
+function buildDisplayRows(tile) {
+  if (!tile) return [];
+  if (tile.type === "table") {
+    return tile.items.map((row) => ({
+      label: row.item,
+      rates: [
+        row.dc != null && { key: keyFor(row.item, "dc"), label: "Dry Clean", service: "dc", price: row.dc },
+        row.si != null && { key: keyFor(row.item, "si"), label: "Steam Iron", service: "si", price: row.si },
+      ].filter(Boolean),
+    }));
+  }
+  return tile.rows
+    .map((row) => {
+      const price = Number.parseInt(row.price, 10);
+      return {
+        label: row.service,
+        rates: Number.isNaN(price)
+          ? []
+          : [{ key: keyFor(row.service, "dc"), label: "Add", service: "dc", price }],
+      };
+    })
+    .filter((row) => row.rates.length > 0);
 }
 
 // Styles cycle by position (modulo), not by name — so categories/extras
@@ -225,18 +170,16 @@ export default function Pricing() {
   const activeKey = params.get("category");
   const { addItem, count: cartCount, total: cartTotal } = useCart();
 
-  // Pending (not-yet-added) quantities for the currently open category's
-  // PriceTable — lives here, not inside PriceTable, so the floating
-  // "Add to Cart" button at the bottom of the page can read and act on
-  // it too.
+  // Pending (not-yet-added) quantities for the currently open tile's list —
+  // lives here, not inside CategoryList, so the floating "Add to Cart"
+  // button at the bottom of the page can read and act on it too.
   const [qtyByKey, setQtyByKey] = useState({});
 
   useEffect(() => {
     setQtyByKey({});
   }, [activeKey]);
 
-  function bump(item, service, delta) {
-    const key = keyFor(item, service);
+  function bump(key, delta) {
     setQtyByKey((prev) => {
       const next = Math.max(0, (prev[key] || 0) + delta);
       return { ...prev, [key]: next };
@@ -273,21 +216,20 @@ export default function Pricing() {
   ];
 
   const activeTile = tiles.find((t) => t.key === activeKey) || null;
-  const categoryItems = activeTile?.type === "table" ? activeTile.items : [];
+  const displayRows = buildDisplayRows(activeTile);
 
   const pendingCount = Object.values(qtyByKey).reduce((sum, q) => sum + q, 0);
-  const pendingTotal = categoryItems.reduce((sum, row) => {
-    const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
-    const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
-    return sum + dcQty * (row.dc || 0) + siQty * (row.si || 0);
-  }, 0);
+  const pendingTotal = displayRows.reduce(
+    (sum, row) => sum + row.rates.reduce((s, r) => s + (qtyByKey[r.key] || 0) * r.price, 0),
+    0
+  );
 
   function handleAddToCart() {
-    categoryItems.forEach((row) => {
-      const dcQty = qtyByKey[keyFor(row.item, "dc")] || 0;
-      if (dcQty > 0) addItem({ item: row.item, service: "dc", price: row.dc, qty: dcQty });
-      const siQty = qtyByKey[keyFor(row.item, "si")] || 0;
-      if (siQty > 0) addItem({ item: row.item, service: "si", price: row.si, qty: siQty });
+    displayRows.forEach((row) => {
+      row.rates.forEach((r) => {
+        const qty = qtyByKey[r.key] || 0;
+        if (qty > 0) addItem({ item: row.label, service: r.service, price: r.price, qty });
+      });
     });
     setQtyByKey({});
   }
@@ -366,11 +308,7 @@ export default function Pricing() {
             </button>
             <SectionHeading eyebrow="Pricing" title={activeTile.label} />
             <div className="mt-10">
-              {activeTile.type === "table" ? (
-                <PriceTable items={activeTile.items} qtyByKey={qtyByKey} onBump={bump} />
-              ) : (
-                <SimpleTable rows={activeTile.rows} labelKey="service" valueKey="price" />
-              )}
+              <CategoryList rows={displayRows} qtyByKey={qtyByKey} onBump={bump} />
             </div>
           </div>
         </section>
