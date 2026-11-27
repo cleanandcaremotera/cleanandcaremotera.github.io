@@ -1,6 +1,16 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { MessageCircle, Star, X } from "lucide-react";
+import {
+  CalendarClock,
+  Image as ImageIcon,
+  Mail,
+  MessageCircle,
+  ShoppingCart,
+  Star,
+  Tag,
+  Truck,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -8,18 +18,23 @@ import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
+import { img } from "../lib/assets.js";
 import { leadServiceLabel, sendLeadUpdateViaWhatsApp } from "../lib/whatsapp.js";
 
 const TABS = [
-  { id: "offer", label: "Offer" },
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "contact", label: "Contact Us" },
-  { id: "pricing", label: "Pricing & Discounts" },
-  { id: "service", label: "Service Bookings" },
-  { id: "cart", label: "Cart Orders" },
-  { id: "pickup", label: "Pickup Requests" },
-  { id: "feedback", label: "Feedback" },
+  { id: "offer", label: "Offer", icon: ImageIcon },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { id: "contact", label: "Contact Us", icon: Mail },
+  { id: "pricing", label: "Pricing & Discounts", icon: Tag },
+  { id: "service", label: "Service Bookings", icon: CalendarClock },
+  { id: "cart", label: "Cart Orders", icon: ShoppingCart },
+  { id: "pickup", label: "Pickup Requests", icon: Truck },
+  { id: "feedback", label: "Feedback", icon: Star },
 ];
+
+// The six data tabs get a summary card above the tab bar — not Offer or
+// Pricing, which aren't "count of new entries" in the same sense.
+const STAT_TAB_IDS = ["whatsapp", "contact", "service", "cart", "pickup", "feedback"];
 
 const STATUS_OPTIONS = ["new", "pending", "in-progress", "completed", "cancelled"];
 
@@ -216,6 +231,15 @@ export default function Admin() {
     feedback: feedback.filter((f) => f.seen === false).length,
   };
 
+  const countByTab = {
+    whatsapp: whatsappMessages.length,
+    contact: contacts.length,
+    cart: cartOrders.length,
+    service: bookings.length,
+    pickup: pickups.length,
+    feedback: feedback.length,
+  };
+
   async function toggleWhatsAppRead(id, read) {
     setWhatsappMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read } : m)));
     try {
@@ -251,25 +275,33 @@ export default function Admin() {
   }, [user]);
 
   if (user === undefined) {
-    return <div className="container-x py-16 text-center text-ink/50">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-cream-light text-center text-ink/50">
+        Loading…
+      </div>
+    );
   }
 
   if (!user) {
     return (
-      <div className="container-x flex min-h-[70vh] flex-col items-center justify-center gap-6 py-16">
-        <form onSubmit={login} className="w-full max-w-sm space-y-4 rounded-2xl border border-ink/10 p-8">
-          <h1 className="font-serif text-2xl font-semibold text-ink">Admin Login</h1>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream-light px-5 py-16">
+        <img src={img("logo.png")} alt="Clean & Care" className="h-12 w-auto" />
+        <form onSubmit={login} className="w-full max-w-sm space-y-4 rounded-2xl border border-ink/10 bg-white p-8 shadow-lg">
+          <div>
+            <p className="eyebrow">Admin Access</p>
+            <h1 className="font-serif text-2xl font-semibold text-ink">Dashboard Login</h1>
+          </div>
           <input
             type="email"
             placeholder="Email"
-            className="w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm"
+            className="w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm focus:border-lime-dark focus:outline-none"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <input
             placeholder="Password"
             type="password"
-            className="w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm"
+            className="w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm focus:border-lime-dark focus:outline-none"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
@@ -284,39 +316,86 @@ export default function Admin() {
   }
 
   return (
-    <div className="container-x py-12">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-2xl font-semibold text-ink sm:text-3xl">Admin Dashboard</h1>
-        <div className="flex items-center gap-3">
-          <Link to="/" className="btn-pill-outline !py-2 !text-xs">View Site</Link>
-          <button onClick={logout} className="btn-pill-outline !py-2 !text-xs">Log Out</button>
+    <div className="min-h-screen bg-cream-light">
+      {/* Header band — same ink/lime language as the site's own CTA banners */}
+      <div className="bg-ink text-white">
+        <div className="container-x flex flex-wrap items-center justify-between gap-5 py-8">
+          <div className="flex items-center gap-4">
+            <img src={img("logo.png")} alt="Clean & Care" className="h-11 w-auto" />
+            <div>
+              <p className="eyebrow !mb-1 !text-lime">Admin</p>
+              <h1 className="font-serif text-2xl font-semibold sm:text-3xl">Dashboard</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="rounded-pill border border-white/25 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white/80 transition-colors hover:border-lime hover:text-lime"
+            >
+              View Site
+            </Link>
+            <button onClick={logout} className="btn-pill-lime !py-2 !text-xs">Log Out</button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-10 flex gap-2 overflow-x-auto border-b border-ink/10 pb-px">
-        {TABS.map((t) => {
-          const unread = unreadByTab[t.id] || 0;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                activeTab === t.id
-                  ? "border-b-2 border-lime-dark bg-cream text-ink"
-                  : "border-b-2 border-transparent text-ink/50 hover:text-ink"
-              }`}
-            >
-              {t.label}
-              {unread > 0 && (
-                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
-                  {unread}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <div className="container-x py-10">
+        {/* Summary cards — same icon-badge card language as the homepage's "Why We Are" highlights */}
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+          {TABS.filter((t) => STAT_TAB_IDS.includes(t.id)).map((t) => {
+            const Icon = t.icon;
+            const unread = unreadByTab[t.id] || 0;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className="group relative rounded-2xl border border-ink/10 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                {unread > 0 && (
+                  <span className="absolute right-3 top-3 flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
+                    {unread}
+                  </span>
+                )}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-lime/25">
+                  <Icon className="h-5 w-5 text-lime-dark" strokeWidth={1.75} />
+                </div>
+                <p className="mt-3 font-serif text-2xl font-semibold text-ink">{countByTab[t.id] ?? 0}</p>
+                <p className="text-xs text-ink/60">{t.label}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab bar */}
+        <div className="mb-6 flex gap-1.5 overflow-x-auto rounded-pill bg-white p-1.5 shadow-sm">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const unread = unreadByTab[t.id] || 0;
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 py-2 text-sm font-semibold transition-colors ${
+                  active ? "bg-ink text-white" : "text-ink/50 hover:bg-cream hover:text-ink"
+                }`}
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.75} />
+                {t.label}
+                {unread > 0 && (
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
+                    {unread}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active tab content, framed like the rest of the site's content cards */}
+        <div className="rounded-3xl border border-ink/10 bg-white p-5 shadow-sm sm:p-8">
 
       {activeTab === "offer" && (
       <section className="mb-12">
@@ -714,6 +793,8 @@ export default function Admin() {
         </div>
       </section>
       )}
+        </div>
+      </div>
     </div>
   );
 }
