@@ -8,6 +8,24 @@ import { useCompany } from "../context/CompanyContext.jsx";
 import { isValidPhone, sanitizePhoneInput } from "../lib/phone.js";
 import { sendPickupViaWhatsApp } from "../lib/whatsapp.js";
 
+// The services customers most commonly request a doorstep pickup for —
+// "Dry Clean & Steam Iron" first and selected by default, since it's the
+// single most common pickup request.
+const SERVICE_TYPE_OPTIONS = [
+  "Dry Clean & Steam Iron",
+  "Wash & Fold (Laundry by Kg)",
+  "Home Deep Cleaning",
+  "Sofa / Upholstery Cleaning",
+  "Carpet Cleaning",
+  "Curtain Cleaning",
+  "Shoes Spa",
+  "Bag Cleaning",
+  "Car Cleaning",
+  "Toy Cleaning",
+  "Home Sanitization",
+  "Other",
+];
+
 export default function SchedulePickup() {
   const { company } = useCompany();
 
@@ -15,7 +33,7 @@ export default function SchedulePickup() {
     name: "",
     phone: "",
     address: "",
-    service: "",
+    service: SERVICE_TYPE_OPTIONS[0],
     preferredDate: "",
     preferredTime: "",
   });
@@ -45,7 +63,14 @@ export default function SchedulePickup() {
     sendPickupViaWhatsApp(payload);
     setPickupStatus({ success: "Opening WhatsApp — just hit send there to confirm your pickup." });
     api.schedulePickup(payload).catch(() => {});
-    setPickupForm({ name: "", phone: "", address: "", service: "", preferredDate: "", preferredTime: "" });
+    setPickupForm({
+      name: "",
+      phone: "",
+      address: "",
+      service: SERVICE_TYPE_OPTIONS[0],
+      preferredDate: "",
+      preferredTime: "",
+    });
     setLocation(null);
   }
 
@@ -136,13 +161,19 @@ export default function SchedulePickup() {
               )}
             </div>
 
-            <IconField label="Service (optional)" icon={Shirt}>
-              <input
-                placeholder="e.g. Dry Cleaning, Wash & Fold"
+            <IconField label="Service" icon={Shirt}>
+              <select
+                required
                 className={inputClass}
                 value={pickupForm.service}
                 onChange={(e) => setPickupForm({ ...pickupForm, service: e.target.value })}
-              />
+              >
+                {SERVICE_TYPE_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </IconField>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
