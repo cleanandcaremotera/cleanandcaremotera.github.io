@@ -100,6 +100,7 @@ function LeadRow({
   const createdLabel = formatRowTimestamp(item.createdAt);
   const meta = renderMeta ? renderMeta(item) : null;
   const subtitle = renderSubtitle ? renderSubtitle(item) : null;
+  const hasSecondLine = Boolean(meta || subtitle || createdLabel);
 
   return (
     <div
@@ -107,7 +108,10 @@ function LeadRow({
         selected ? "border-lime-dark bg-lime/5" : "border-ink/10 bg-white"
       }`}
     >
-      <div className="flex items-center gap-3 p-3.5 sm:p-4">
+      {/* Line 1: checkbox, type icon + name, quick actions — single line,
+          so the checkbox and action icons line up with the name instead of
+          centering against a taller multi-line block. */}
+      <div className={`flex items-center gap-3 px-3.5 pt-3.5 sm:px-4 sm:pt-4 ${hasSecondLine ? "pb-1.5" : "pb-3.5 sm:pb-4"}`}>
         <input
           type="checkbox"
           checked={selected}
@@ -115,29 +119,13 @@ function LeadRow({
           className="h-4 w-4 flex-shrink-0 rounded border-ink/30"
           aria-label="Select row"
         />
-        {/* Two compact lines (type icon + name, then a meta chip + subtitle)
-            plus a small muted timestamp footer — everything else waits for
-            the tap-to-expand detail panel below. */}
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
-          <div className="flex min-w-0 items-center gap-2">
-            {renderIcon && <span className="flex flex-shrink-0 items-center">{renderIcon(item)}</span>}
-            <p className="truncate font-medium text-ink">{renderTitle(item)}</p>
-          </div>
-          {(meta || subtitle) && (
-            <div className="flex min-w-0 items-center gap-1.5">
-              {meta && (
-                <span className="flex-shrink-0 rounded-pill bg-cream px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/60">
-                  {meta}
-                </span>
-              )}
-              {subtitle && <span className="truncate text-xs text-ink/50">{subtitle}</span>}
-            </div>
-          )}
-          {createdLabel && <p className="text-[11px] text-ink/35">{createdLabel}</p>}
+          {renderIcon && <span className="flex flex-shrink-0 items-center">{renderIcon(item)}</span>}
+          <p className="truncate font-medium text-ink">{renderTitle(item)}</p>
         </button>
         <div className="flex flex-shrink-0 items-center gap-2">
           {hasStatus && <StatusSelect status={item.status} onChange={onStatusChange} />}
@@ -153,6 +141,28 @@ function LeadRow({
           </button>
         </div>
       </div>
+
+      {/* Line 2: meta chip + subtitle on the left, created date/time pinned
+          to the bottom-right — a full-width line of its own so it never
+          fights the first line's actions for space. */}
+      {hasSecondLine && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex w-full items-center justify-between gap-3 px-3.5 pb-3.5 text-left sm:px-4 sm:pb-4"
+        >
+          <div className="flex min-w-0 items-center gap-1.5">
+            {meta && (
+              <span className="flex-shrink-0 rounded-pill bg-cream px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/60">
+                {meta}
+              </span>
+            )}
+            {subtitle && <span className="truncate text-xs text-ink/50">{subtitle}</span>}
+          </div>
+          {createdLabel && <span className="flex-shrink-0 text-[11px] text-ink/35">{createdLabel}</span>}
+        </button>
+      )}
+
       {expanded && (
         <div className="border-t border-ink/10 bg-cream/40 px-4 py-4 sm:px-5">{renderDetails(item)}</div>
       )}
