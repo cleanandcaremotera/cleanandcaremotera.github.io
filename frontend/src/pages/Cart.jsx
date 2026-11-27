@@ -8,6 +8,19 @@ import { sendCartOrderViaWhatsApp } from "../lib/whatsapp.js";
 const inputClass =
   "w-full rounded-lg border border-ink/15 px-4 py-2.5 text-sm outline-none focus:border-lime-dark focus:ring-2 focus:ring-lime/30";
 
+// A single "Service" label for the order record (admin's lead list shows
+// this the same way it shows a booking's or pickup's service) — summarizes
+// which of dry clean / steam iron are actually in the cart, since items
+// can mix both.
+function summarizeCartService(items) {
+  const hasDryClean = items.some((l) => l.service === "dc");
+  const hasSteamIron = items.some((l) => l.service === "si");
+  if (hasDryClean && hasSteamIron) return "Dry Clean & Steam Iron";
+  if (hasDryClean) return "Dry Clean";
+  if (hasSteamIron) return "Steam Iron";
+  return "";
+}
+
 export default function Cart() {
   const { items, updateQty, removeItem, total, clearCart } = useCart();
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
@@ -27,6 +40,7 @@ export default function Cart() {
     const payload = {
       ...form,
       items,
+      service: summarizeCartService(items),
       total,
       discountPercent: discountActive ? discount.percent : 0,
       discountAmount,

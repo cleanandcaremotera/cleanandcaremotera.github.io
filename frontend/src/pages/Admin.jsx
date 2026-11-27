@@ -132,6 +132,10 @@ function serviceLeadMeta(item) {
   if (item.type === "service") return initialsOf(item.serviceName) || null;
   if (item.type === "pickup") return initialsOf(item.service) || null;
   if (item.type === "cart") {
+    // `service` (Dry Clean / Steam Iron / both) is only present on carts
+    // checked out after this field shipped — older orders fall back to
+    // guessing from the first item so they don't show a blank chip.
+    if (item.service) return initialsOf(item.service);
     const first = (item.items || [])[0];
     return first ? initialsOf(first.item) : "CART";
   }
@@ -165,6 +169,7 @@ function serviceLeadDetails(item) {
       )}
       {item.type === "cart" && (
         <>
+          <DetailField label="Service">{item.service}</DetailField>
           <DetailField label="Items">{(item.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}</DetailField>
           <DetailField label="Total">
             <span className="font-semibold text-ink">&#8377;{item.total}</span>
