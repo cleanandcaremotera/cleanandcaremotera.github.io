@@ -102,6 +102,15 @@ export default function Navbar() {
             <NavLink to="/schedule-pickup" className="btn-pill-lime mt-2 justify-center">
               Schedule Pickup
             </NavLink>
+            <NavLink
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="mt-2 flex items-center justify-end gap-2 px-2 py-2 text-sm font-medium uppercase tracking-wide text-white/60 hover:text-lime"
+              aria-label="Admin"
+            >
+              <Lock className="h-4 w-4" />
+              Admin
+            </NavLink>
           </nav>
         </div>
       )}
