@@ -56,17 +56,23 @@ export default function OfferCarousel({ images }) {
         </button>
       </div>
 
-      <div className="mt-4 flex justify-center gap-2">
+      <div className="mt-2 flex justify-center gap-1">
         {images.map((src, i) => (
+          // The dot itself stays small; the button's own padding gives it a
+          // real touch target instead of an 8px-tall tap zone.
           <button
             key={src}
             type="button"
             onClick={() => emblaApi?.scrollTo(i)}
             aria-label={`Go to offer ${i + 1}`}
-            className={`h-2 rounded-pill transition-all ${
-              i === selected ? "w-6 bg-lime-dark" : "w-2 bg-ink/20 hover:bg-ink/30"
-            }`}
-          />
+            className="group flex items-center justify-center p-2.5"
+          >
+            <span
+              className={`block h-2 rounded-pill transition-all ${
+                i === selected ? "w-6 bg-lime-dark" : "w-2 bg-ink/20 group-hover:bg-ink/30"
+              }`}
+            />
+          </button>
         ))}
       </div>
     </div>

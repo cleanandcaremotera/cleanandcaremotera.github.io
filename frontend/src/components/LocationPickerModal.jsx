@@ -117,7 +117,10 @@ export default function LocationPickerModal({ onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/60 p-4" onClick={onClose}>
       <div
-        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
+        // The header/search/map/footer sections are fixed-height, so without
+        // its own scroll the max-h cap alone just clips content on a short
+        // screen instead of making it reachable.
+        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4 border-b border-ink/10 p-5">
@@ -171,7 +174,7 @@ export default function LocationPickerModal({ onConfirm, onClose }) {
           {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
-        <div className="relative h-72 w-full flex-shrink-0 border-y border-ink/10">
+        <div className="relative h-48 w-full flex-shrink-0 border-y border-ink/10 sm:h-72">
           <MapContainer
             center={position || DEFAULT_CENTER}
             zoom={position ? 16 : 12}

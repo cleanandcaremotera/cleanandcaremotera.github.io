@@ -41,11 +41,15 @@ export default function BookNowModal({ service, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/60 p-4"
+      // items-start (not items-center) + overflow-y-auto so a form taller
+      // than the viewport — e.g. once the on-screen keyboard eats a third
+      // of a short phone's screen — scrolls into view instead of having
+      // its top (and the submit button) clipped off unreachably.
+      className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-ink/60 p-4 py-8 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md flex-shrink-0 rounded-2xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">

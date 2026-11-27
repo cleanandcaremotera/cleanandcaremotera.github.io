@@ -35,10 +35,6 @@ const TABS = [
   { id: "archive", label: "Archive", icon: ArchiveIcon },
 ];
 
-// The six data tabs get a summary card above the tab bar — not Offer,
-// Pricing, or Archive, which aren't "count of new entries" in the same sense.
-const STAT_TAB_IDS = ["whatsapp", "contact", "service", "cart", "pickup", "feedback"];
-
 function FeedbackStars({ rating = 0 }) {
   return (
     <div className="flex gap-0.5">
@@ -548,38 +544,13 @@ export default function Admin() {
       </div>
 
       <div className="container-x py-10">
-        {/* Summary cards — same icon-badge card language as the homepage's "Why We Are" highlights */}
-        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
-          {TABS.filter((t) => STAT_TAB_IDS.includes(t.id)).map((t) => {
-            const Icon = t.icon;
-            const unread = unreadByTab[t.id] || 0;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className="group relative rounded-2xl border border-ink/10 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                {unread > 0 && (
-                  <span className="absolute right-3 top-3 flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
-                    {unread}
-                  </span>
-                )}
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-lime/25">
-                  <Icon className="h-5 w-5 text-lime-dark" strokeWidth={1.75} />
-                </div>
-                <p className="mt-3 font-serif text-2xl font-semibold text-ink">{countByTab[t.id] ?? 0}</p>
-                <p className="text-xs text-ink/60">{t.label}</p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab bar */}
+        {/* Tab bar — record counts sit right in the label (small, muted) so
+            the separate summary-card row isn't needed. */}
         <div className="mb-6 flex gap-1.5 overflow-x-auto rounded-pill bg-white p-1.5 shadow-sm">
           {TABS.map((t) => {
             const Icon = t.icon;
             const unread = unreadByTab[t.id] || 0;
+            const count = countByTab[t.id];
             const active = activeTab === t.id;
             return (
               <button
@@ -592,6 +563,11 @@ export default function Admin() {
               >
                 <Icon className="h-4 w-4" strokeWidth={1.75} />
                 {t.label}
+                {count !== undefined && (
+                  <span className={`text-[10px] font-normal ${active ? "text-white/50" : "text-ink/35"}`}>
+                    {count}
+                  </span>
+                )}
                 {unread > 0 && (
                   <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-pill bg-red-600 px-1 text-[11px] font-bold text-white">
                     {unread}
