@@ -1,4 +1,4 @@
-import { Menu, ShoppingCart, X } from "lucide-react";
+import { Lock, Menu, ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext.jsx";
@@ -55,6 +55,9 @@ export default function Navbar() {
           <NavLink to="/schedule-pickup" className="btn-pill-lime">
             Schedule Pickup
           </NavLink>
+          <NavLink to="/admin" className="text-white/60 hover:text-lime" aria-label="Admin" title="Admin">
+            <Lock className="h-5 w-5" />
+          </NavLink>
         </div>
 
         <div className="flex items-center gap-4 lg:hidden">
@@ -65,6 +68,9 @@ export default function Navbar() {
                 {count}
               </span>
             )}
+          </NavLink>
+          <NavLink to="/admin" className="text-white/60 hover:text-lime" aria-label="Admin" title="Admin">
+            <Lock className="h-5 w-5" />
           </NavLink>
           <button
             className="text-white"
