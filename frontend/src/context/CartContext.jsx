@@ -22,14 +22,14 @@ export function CartProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  function addItem({ item, service, price }) {
+  function addItem({ item, service, price, qty = 1 }) {
     const key = `${item}__${service}`;
     setItems((prev) => {
       const existing = prev.find((l) => l.key === key);
       if (existing) {
-        return prev.map((l) => (l.key === key ? { ...l, qty: l.qty + 1 } : l));
+        return prev.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l));
       }
-      return [...prev, { key, item, service, price, qty: 1 }];
+      return [...prev, { key, item, service, price, qty }];
     });
 
     setToast(`${item} added to cart`);

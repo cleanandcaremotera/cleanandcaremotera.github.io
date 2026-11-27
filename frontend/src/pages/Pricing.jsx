@@ -3,155 +3,145 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import OfferCarousel from "../components/OfferCarousel.jsx";
+import QtyPromptModal from "../components/QtyPromptModal.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { img } from "../lib/assets.js";
 
-function PriceTable({ title, items }) {
-  const { addItem } = useCart();
+const selectClass =
+  "w-full rounded-lg border border-ink/15 px-4 py-3 text-sm outline-none focus:border-lime-dark focus:ring-2 focus:ring-lime/30";
 
+// A single item's rate(s), shown after it's picked from the dropdown below —
+// each rate opens the qty prompt rather than adding straight to cart.
+function RateRow({ label, price, onAdd }) {
   return (
-    <div>
-      {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
-
-      {/* Mobile: stacked cards — no horizontal scrolling needed */}
-      <div className="space-y-3 sm:hidden">
-        {items.map((row) => (
-          <div key={row.item} className="rounded-xl border border-ink/10 p-4">
-            <p className="font-medium text-ink">{row.item}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {row.dc != null && (
-                <button
-                  onClick={() => addItem({ item: row.item, service: "dc", price: row.dc })}
-                  className="flex items-center gap-1.5 rounded-pill border border-ink/15 px-3 py-1.5 text-xs hover:bg-lime/20"
-                >
-                  Dry Clean &#8377;{row.dc}
-                  <Plus className="h-3 w-3" />
-                </button>
-              )}
-              {row.si != null && (
-                <button
-                  onClick={() => addItem({ item: row.item, service: "si", price: row.si })}
-                  className="flex items-center gap-1.5 rounded-pill border border-ink/15 px-3 py-1.5 text-xs hover:bg-lime/20"
-                >
-                  Steam Iron &#8377;{row.si}
-                  <Plus className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+    <div className="flex items-center justify-between gap-4 border-b border-ink/10 p-4 last:border-0">
+      <div>
+        <p className="font-medium text-ink">{label}</p>
+        <p className="text-sm text-ink/60">&#8377;{price} / item</p>
       </div>
-
-      {/* Tablet/desktop: full table */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-        <table className="w-full min-w-[560px] text-left text-sm">
-          <thead className="bg-cream">
-            <tr>
-              <th className="px-5 py-3 font-semibold text-ink">Item</th>
-              <th className="px-5 py-3 font-semibold text-ink">Dry Clean (&#8377;)</th>
-              <th className="px-5 py-3 font-semibold text-ink">Steam Iron (&#8377;)</th>
-              <th className="px-5 py-3 font-semibold text-ink">Add to Cart</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((row, i) => (
-              <tr key={row.item} className={i % 2 ? "bg-cream-light/60" : "bg-white"}>
-                <td className="px-5 py-2.5 text-ink/80">{row.item}</td>
-                <td className="px-5 py-2.5 text-ink/80">{row.dc ?? "—"}</td>
-                <td className="px-5 py-2.5 text-ink/80">{row.si ?? "—"}</td>
-                <td className="px-5 py-2.5">
-                  <div className="flex gap-2">
-                    {row.dc != null && (
-                      <button
-                        onClick={() => addItem({ item: row.item, service: "dc", price: row.dc })}
-                        className="flex items-center gap-1 rounded-pill border border-ink/15 px-2.5 py-1 text-xs hover:bg-lime/20"
-                        title="Add Dry Clean to cart"
-                      >
-                        <Plus className="h-3 w-3" /> DC
-                      </button>
-                    )}
-                    {row.si != null && (
-                      <button
-                        onClick={() => addItem({ item: row.item, service: "si", price: row.si })}
-                        className="flex items-center gap-1 rounded-pill border border-ink/15 px-2.5 py-1 text-xs hover:bg-lime/20"
-                        title="Add Steam Iron to cart"
-                      >
-                        <Plus className="h-3 w-3" /> SI
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <button onClick={onAdd} className="btn-pill-lime !py-2 !text-xs">
+        <Plus className="h-3.5 w-3.5" /> Add to Cart
+      </button>
     </div>
   );
 }
 
-function SimpleTable({ title, rows, labelKey, valueKey }) {
+// Pick an item from the dropdown, see its Dry Clean / Steam Iron rates,
+// then confirm a quantity before anything actually lands in the cart.
+function PriceTable({ title, items }) {
   const { addItem } = useCart();
+  const [selected, setSelected] = useState(items[0]?.item || "");
+  const [pendingAdd, setPendingAdd] = useState(null); // { item, service, price } | null
+
+  useEffect(() => {
+    setSelected(items[0]?.item || "");
+  }, [items]);
+
+  const row = items.find((r) => r.item === selected);
 
   return (
     <div>
       {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
 
-      {/* Mobile: stacked cards */}
-      <div className="space-y-3 sm:hidden">
-        {rows.map((row) => {
-          const priceValue = Number.parseInt(row[valueKey], 10);
-          const canAdd = !Number.isNaN(priceValue);
-          return (
-            <div
-              key={row[labelKey]}
-              className="flex items-center justify-between gap-3 rounded-xl border border-ink/10 p-4"
-            >
-              <div>
-                <p className="font-medium text-ink">{row[labelKey]}</p>
-                <p className="text-xs text-ink/60">&#8377;{row[valueKey]}</p>
-              </div>
-              {canAdd && (
-                <button
-                  onClick={() => addItem({ item: row[labelKey], service: "dc", price: priceValue })}
-                  className="flex flex-shrink-0 items-center gap-1 rounded-pill border border-ink/15 px-3 py-1.5 text-xs hover:bg-lime/20"
-                >
-                  <Plus className="h-3 w-3" /> Add
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose an item</span>
+        <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClass}>
+          {items.map((r) => (
+            <option key={r.item} value={r.item}>
+              {r.item}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      {/* Tablet/desktop: table */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-        <table className="w-full min-w-[360px] text-left text-sm">
-          <tbody>
-            {rows.map((row, i) => {
-              const priceValue = Number.parseInt(row[valueKey], 10);
-              const canAdd = !Number.isNaN(priceValue);
-              return (
-                <tr key={row[labelKey]} className={i % 2 ? "bg-cream-light/60" : "bg-white"}>
-                  <td className="px-5 py-2.5 text-ink/80">{row[labelKey]}</td>
-                  <td className="px-5 py-2.5 font-medium text-ink">&#8377;{row[valueKey]}</td>
-                  <td className="px-5 py-2.5">
-                    {canAdd && (
-                      <button
-                        onClick={() => addItem({ item: row[labelKey], service: "dc", price: priceValue })}
-                        className="flex items-center gap-1 rounded-pill border border-ink/15 px-2.5 py-1 text-xs hover:bg-lime/20"
-                      >
-                        <Plus className="h-3 w-3" /> Add
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {row && (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-ink/10">
+          {row.dc != null && (
+            <RateRow
+              label="Dry Clean"
+              price={row.dc}
+              onAdd={() => setPendingAdd({ item: row.item, service: "dc", price: row.dc })}
+            />
+          )}
+          {row.si != null && (
+            <RateRow
+              label="Steam Iron"
+              price={row.si}
+              onAdd={() => setPendingAdd({ item: row.item, service: "si", price: row.si })}
+            />
+          )}
+        </div>
+      )}
+
+      {pendingAdd && (
+        <QtyPromptModal
+          item={pendingAdd.item}
+          serviceLabel={pendingAdd.service === "dc" ? "Dry Clean" : "Steam Iron"}
+          price={pendingAdd.price}
+          onConfirm={(qty) => {
+            addItem({ ...pendingAdd, qty });
+            setPendingAdd(null);
+          }}
+          onCancel={() => setPendingAdd(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Same dropdown-then-qty-prompt pattern for extras groups (By Weight,
+// Shoes Spa, Add-Ons), which only have one rate per row instead of a
+// Dry Clean / Steam Iron split.
+function SimpleTable({ title, rows, labelKey, valueKey }) {
+  const { addItem } = useCart();
+  const [selected, setSelected] = useState(rows[0]?.[labelKey] || "");
+  const [pendingAdd, setPendingAdd] = useState(null);
+
+  useEffect(() => {
+    setSelected(rows[0]?.[labelKey] || "");
+  }, [rows, labelKey]);
+
+  const row = rows.find((r) => r[labelKey] === selected);
+  const priceValue = row ? Number.parseInt(row[valueKey], 10) : NaN;
+  const canAdd = row && !Number.isNaN(priceValue);
+
+  return (
+    <div>
+      {title && <h3 className="mb-4 font-serif text-2xl font-semibold text-ink">{title}</h3>}
+
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium text-ink/80">Choose a service</span>
+        <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClass}>
+          {rows.map((r) => (
+            <option key={r[labelKey]} value={r[labelKey]}>
+              {r[labelKey]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {canAdd && (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-ink/10">
+          <RateRow
+            label={row[labelKey]}
+            price={priceValue}
+            onAdd={() => setPendingAdd({ item: row[labelKey], service: "dc", price: priceValue })}
+          />
+        </div>
+      )}
+
+      {pendingAdd && (
+        <QtyPromptModal
+          item={pendingAdd.item}
+          price={pendingAdd.price}
+          onConfirm={(qty) => {
+            addItem({ ...pendingAdd, qty });
+            setPendingAdd(null);
+          }}
+          onCancel={() => setPendingAdd(null)}
+        />
+      )}
     </div>
   );
 }
