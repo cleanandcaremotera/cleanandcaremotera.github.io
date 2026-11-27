@@ -1,4 +1,6 @@
 import { Archive, MessageCircleMore } from "lucide-react";
+import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 function formatTime(ts) {
   if (!ts?.toDate) return "";
@@ -19,8 +21,15 @@ function replyLink(phone) {
 // first — this component just renders what it's given.
 export default function AdminWhatsAppInbox({ messages, loading, onToggleRead, onArchive }) {
   const unreadCount = messages.filter((m) => !m.read).length;
+  const [pendingArchiveId, setPendingArchiveId] = useState(null);
+
+  function confirmArchive() {
+    if (pendingArchiveId) onArchive(pendingArchiveId);
+    setPendingArchiveId(null);
+  }
 
   return (
+    <>
     <section className="mb-12">
       <div className="mb-4 flex items-center gap-2">
         <h2 className="font-serif text-xl font-semibold text-ink">WhatsApp Inbox</h2>
@@ -50,7 +59,7 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead, on
                   {m.read ? "Read" : "Mark read"}
                 </button>
                 <button
-                  onClick={() => onArchive(m.id)}
+                  onClick={() => setPendingArchiveId(m.id)}
                   title="Archive"
                   className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink/50 hover:bg-ink/10 hover:text-ink"
                 >
@@ -114,7 +123,7 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead, on
                       <MessageCircleMore className="h-3.5 w-3.5" /> Reply
                     </a>
                     <button
-                      onClick={() => onArchive(m.id)}
+                      onClick={() => setPendingArchiveId(m.id)}
                       title="Archive"
                       className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink/50 hover:bg-ink/10 hover:text-ink"
                     >
@@ -131,5 +140,16 @@ export default function AdminWhatsAppInbox({ messages, loading, onToggleRead, on
         </table>
       </div>
     </section>
+
+    {pendingArchiveId && (
+      <ConfirmDialog
+        title="Archive This Message?"
+        message="This WhatsApp message will be hidden from the inbox and moved to the Archive tab. You can restore it anytime."
+        confirmLabel="Archive"
+        onConfirm={confirmArchive}
+        onCancel={() => setPendingArchiveId(null)}
+      />
+    )}
+    </>
   );
 }

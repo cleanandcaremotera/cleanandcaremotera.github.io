@@ -1,4 +1,6 @@
 import { Archive, ArchiveRestore, MessageCircle } from "lucide-react";
+import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 export const STATUS_OPTIONS = ["new", "pending", "in-progress", "completed", "cancelled"];
 
@@ -81,7 +83,36 @@ export default function LeadTable({
   const allSelected = items.length > 0 && items.every((i) => selectedIds.has(i.id));
   const colSpan = columns.length + (hasStatus ? 1 : 0) + 2;
 
+  // Archive/restore is a one-click, somewhat-hidden icon button — a
+  // confirmation step (for both a single row and the bulk toolbar) avoids
+  // accidentally hiding a record the admin didn't mean to touch.
+  const [pendingArchive, setPendingArchive] = useState(null); // { ids: string[] } | null
+  const pendingCount = pendingArchive?.ids.length || 0;
+  const pendingIsBulk = pendingCount > 1;
+  const archiveActionWord = archived ? "Restore" : "Archive";
+  const archiveDialogTitle = pendingIsBulk
+    ? `${archiveActionWord} ${pendingCount} Selected Records?`
+    : `${archiveActionWord} This Record?`;
+  const archiveDialogMessage = archived
+    ? pendingIsBulk
+      ? "These records will be removed from the Archive tab and reappear in their regular list."
+      : "This record will be removed from the Archive tab and reappear in its regular list."
+    : pendingIsBulk
+      ? "These records will be hidden from this list and moved to the Archive tab. You can restore them anytime."
+      : "This record will be hidden from this list and moved to the Archive tab. You can restore it anytime.";
+
+  function confirmPendingArchive() {
+    if (!pendingArchive) return;
+    if (pendingArchive.ids.length === 1) {
+      onArchiveToggle(pendingArchive.ids[0], !archived);
+    } else {
+      onBulkArchive();
+    }
+    setPendingArchive(null);
+  }
+
   return (
+    <>
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-serif text-xl font-semibold text-ink">{title}</h2>
@@ -111,7 +142,7 @@ export default function LeadTable({
             )}
             <button
               type="button"
-              onClick={onBulkArchive}
+              onClick={() => setPendingArchive({ ids: [...selectedIds] })}
               className="rounded-pill bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink/80"
             >
               {archived ? "Restore Selected" : "Archive Selected"}
@@ -138,7 +169,7 @@ export default function LeadTable({
               <div className="flex items-center gap-2">
                 {hasStatus && <StatusSelect status={item.status} onChange={(s) => onStatusChange(item.id, s)} />}
                 {onNotify && <NotifyButton onClick={() => onNotify(item)} />}
-                <ArchiveButton archived={archived} onClick={() => onArchiveToggle(item.id, !archived)} />
+                <ArchiveButton archived={archived} onClick={() => setPendingArchive({ ids: [item.id] })} />
               </div>
             </div>
             {renderMobileCard(item)}
@@ -195,7 +226,7 @@ export default function LeadTable({
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     {onNotify && <NotifyButton onClick={() => onNotify(item)} />}
-                    <ArchiveButton archived={archived} onClick={() => onArchiveToggle(item.id, !archived)} />
+                    <ArchiveButton archived={archived} onClick={() => setPendingArchive({ ids: [item.id] })} />
                   </div>
                 </td>
               </tr>
@@ -211,5 +242,16 @@ export default function LeadTable({
         </table>
       </div>
     </section>
+
+    {pendingArchive && (
+      <ConfirmDialog
+        title={archiveDialogTitle}
+        message={archiveDialogMessage}
+        confirmLabel={archiveActionWord}
+        onConfirm={confirmPendingArchive}
+        onCancel={() => setPendingArchive(null)}
+      />
+    )}
+    </>
   );
 }
