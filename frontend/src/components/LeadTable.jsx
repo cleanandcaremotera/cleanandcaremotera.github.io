@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, MessageCircle } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronDown, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import ConfirmDialog from "./ConfirmDialog.jsx";
 
@@ -57,17 +57,90 @@ function ArchiveButton({ archived, onClick }) {
   );
 }
 
-// Generic table/card-list for every admin lead-type tab (Contact, Service
-// Bookings, Cart Orders, Pickup Requests, Feedback). Each type supplies its
-// own column/mobile-card rendering; this component owns the parts that are
-// identical everywhere: row selection, bulk status/archive actions, and the
-// per-row archive toggle. `archived` flips the row action to "restore" and
-// the bulk action to "Restore Selected" for use on the Archive tab.
+// A labeled field inside an expanded row's detail panel — renders nothing
+// if the value is empty, so optional fields (email, message, map link)
+// don't leave behind an awkward blank caption.
+export function DetailField({ label, children }) {
+  if (children === undefined || children === null || children === "") return null;
+  return (
+    <div className="mb-3 last:mb-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink/40">{label}</p>
+      <div className="mt-0.5 text-sm text-ink/80">{children}</div>
+    </div>
+  );
+}
+
+function LeadRow({
+  item,
+  renderTitle,
+  renderSubtitle,
+  renderBadge,
+  renderDetails,
+  hasStatus,
+  onStatusChange,
+  onNotify,
+  archived,
+  onArchiveClick,
+  selected,
+  onToggleSelect,
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className={`overflow-hidden rounded-xl border transition-colors ${
+        selected ? "border-lime-dark bg-lime/5" : "border-ink/10 bg-white"
+      }`}
+    >
+      <div className="flex items-center gap-3 p-3.5 sm:p-4">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          className="h-4 w-4 flex-shrink-0 rounded border-ink/30"
+          aria-label="Select row"
+        />
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          {renderBadge && <div className="flex-shrink-0">{renderBadge(item)}</div>}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-ink">{renderTitle(item)}</p>
+            {renderSubtitle && <p className="truncate text-xs text-ink/50">{renderSubtitle(item)}</p>}
+          </div>
+          <ChevronDown
+            className={`h-4 w-4 flex-shrink-0 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
+        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {hasStatus && <StatusSelect status={item.status} onChange={onStatusChange} />}
+          {onNotify && <NotifyButton onClick={onNotify} />}
+          <ArchiveButton archived={archived} onClick={onArchiveClick} />
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-ink/10 bg-cream/40 px-4 py-4 sm:px-5">{renderDetails(item)}</div>
+      )}
+    </div>
+  );
+}
+
+// Elegant, compact-by-default list for every admin lead-type tab (Contact,
+// Service Bookings, Feedback, archived WhatsApp). Each row shows just a
+// title/subtitle/badge summary; tapping it expands a formatted detail panel
+// with everything else. This component owns the parts that are identical
+// everywhere: row selection, bulk status/archive actions, and the per-row
+// archive toggle. `archived` flips the row action to "restore" and the
+// bulk action to "Restore Selected" for use on the Archive tab.
 export default function LeadTable({
   title,
   items,
-  columns,
-  renderMobileCard,
+  renderTitle,
+  renderSubtitle,
+  renderBadge,
+  renderDetails,
   hasStatus = true,
   onStatusChange,
   onNotify,
@@ -81,7 +154,6 @@ export default function LeadTable({
   emptyText,
 }) {
   const allSelected = items.length > 0 && items.every((i) => selectedIds.has(i.id));
-  const colSpan = columns.length + (hasStatus ? 1 : 0) + 2;
 
   // Archive/restore is a one-click, somewhat-hidden icon button — a
   // confirmation step (for both a single row and the bulk toolbar) avoids
@@ -113,145 +185,87 @@ export default function LeadTable({
 
   return (
     <>
-    <section>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-serif text-xl font-semibold text-ink">{title}</h2>
-        {selectedIds.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-pill bg-cream px-3 py-1.5">
-            <span className="text-xs font-semibold text-ink/70">{selectedIds.size} selected</span>
-            {hasStatus && (
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    onBulkStatus(e.target.value);
-                    e.target.value = "";
-                  }
-                }}
-                className="rounded-pill border-0 bg-white px-2.5 py-1 text-xs font-medium text-ink"
-              >
-                <option value="" disabled>
-                  Set status…
-                </option>
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-xl font-semibold text-ink">{title}</h2>
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-pill bg-cream px-3 py-1.5">
+              <span className="text-xs font-semibold text-ink/70">{selectedIds.size} selected</span>
+              {hasStatus && (
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      onBulkStatus(e.target.value);
+                      e.target.value = "";
+                    }
+                  }}
+                  className="rounded-pill border-0 bg-white px-2.5 py-1 text-xs font-medium text-ink"
+                >
+                  <option value="" disabled>
+                    Set status…
                   </option>
-                ))}
-              </select>
-            )}
-            <button
-              type="button"
-              onClick={() => setPendingArchive({ ids: [...selectedIds] })}
-              className="rounded-pill bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink/80"
-            >
-              {archived ? "Restore Selected" : "Archive Selected"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile: stacked cards */}
-      <div className="space-y-3 sm:hidden">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={`rounded-xl border p-4 ${selectedIds.has(item.id) ? "border-lime-dark bg-lime/5" : "border-ink/10"}`}
-          >
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <input
-                type="checkbox"
-                checked={selectedIds.has(item.id)}
-                onChange={() => onToggleOne(item.id)}
-                className="h-4 w-4 rounded border-ink/30"
-                aria-label="Select row"
-              />
-              <div className="flex items-center gap-2">
-                {hasStatus && <StatusSelect status={item.status} onChange={(s) => onStatusChange(item.id, s)} />}
-                {onNotify && <NotifyButton onClick={() => onNotify(item)} />}
-                <ArchiveButton archived={archived} onClick={() => setPendingArchive({ ids: [item.id] })} />
-              </div>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                type="button"
+                onClick={() => setPendingArchive({ ids: [...selectedIds] })}
+                className="rounded-pill bg-ink px-3 py-1 text-xs font-semibold text-white hover:bg-ink/80"
+              >
+                {archived ? "Restore Selected" : "Archive Selected"}
+              </button>
             </div>
-            {renderMobileCard(item)}
-          </div>
-        ))}
-        {items.length === 0 && <p className="text-sm text-ink/50">{emptyText}</p>}
-      </div>
+          )}
+        </div>
 
-      {/* Tablet/desktop: table */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-ink/10 sm:block">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-cream">
-            <tr>
-              <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={onToggleAll}
-                  className="h-4 w-4 rounded border-ink/30"
-                  aria-label="Select all rows"
-                />
-              </th>
-              {columns.map((c) => (
-                <th key={c.label} className="px-4 py-3">
-                  {c.label}
-                </th>
-              ))}
-              {hasStatus && <th className="px-4 py-3">Status</th>}
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className={`border-t border-ink/5 ${selectedIds.has(item.id) ? "bg-lime/5" : ""}`}>
-                <td className="px-4 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => onToggleOne(item.id)}
-                    className="h-4 w-4 rounded border-ink/30"
-                    aria-label="Select row"
-                  />
-                </td>
-                {columns.map((c) => (
-                  <td key={c.label} className="px-4 py-2.5">
-                    {c.render(item)}
-                  </td>
-                ))}
-                {hasStatus && (
-                  <td className="px-4 py-2.5">
-                    <StatusSelect status={item.status} onChange={(s) => onStatusChange(item.id, s)} />
-                  </td>
-                )}
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    {onNotify && <NotifyButton onClick={() => onNotify(item)} />}
-                    <ArchiveButton archived={archived} onClick={() => setPendingArchive({ ids: [item.id] })} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td className="px-4 py-4 text-ink/50" colSpan={colSpan}>
-                  {emptyText}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </section>
+        <div className="space-y-2">
+          {items.map((item) => (
+            <LeadRow
+              key={item.id}
+              item={item}
+              renderTitle={renderTitle}
+              renderSubtitle={renderSubtitle}
+              renderBadge={renderBadge}
+              renderDetails={renderDetails}
+              hasStatus={hasStatus}
+              onStatusChange={(s) => onStatusChange(item.id, s)}
+              onNotify={onNotify ? () => onNotify(item) : null}
+              archived={archived}
+              onArchiveClick={() => setPendingArchive({ ids: [item.id] })}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={() => onToggleOne(item.id)}
+            />
+          ))}
+          {items.length === 0 && <p className="text-sm text-ink/50">{emptyText}</p>}
+        </div>
 
-    {pendingArchive && (
-      <ConfirmDialog
-        title={archiveDialogTitle}
-        message={archiveDialogMessage}
-        confirmLabel={archiveActionWord}
-        onConfirm={confirmPendingArchive}
-        onCancel={() => setPendingArchive(null)}
-      />
-    )}
+        {items.length > 0 && (
+          <label className="mt-3 flex w-fit items-center gap-2 text-xs font-medium text-ink/50 hover:text-ink">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={onToggleAll}
+              className="h-4 w-4 rounded border-ink/30"
+            />
+            Select all
+          </label>
+        )}
+      </section>
+
+      {pendingArchive && (
+        <ConfirmDialog
+          title={archiveDialogTitle}
+          message={archiveDialogMessage}
+          confirmLabel={archiveActionWord}
+          onConfirm={confirmPendingArchive}
+          onCancel={() => setPendingArchive(null)}
+        />
+      )}
     </>
   );
 }

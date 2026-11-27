@@ -17,7 +17,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import AdminPricing from "../components/AdminPricing.jsx";
 import AdminWhatsAppInbox from "../components/AdminWhatsAppInbox.jsx";
-import LeadTable from "../components/LeadTable.jsx";
+import LeadTable, { DetailField } from "../components/LeadTable.jsx";
 import { cloudinaryConfigured, uploadOfferImage } from "../lib/cloudinary.js";
 import { auth, db } from "../lib/firebase.js";
 import { img } from "../lib/assets.js";
@@ -104,119 +104,111 @@ function formatDateTime(ts) {
   return ts.toDate().toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
-// --- Column/mobile-card definitions for each lead type's LeadTable ---
+// --- Per-type summary (title/subtitle/badge) + expanded-detail renderers,
+// each type feeds its own shape into LeadTable's compact-by-default,
+// tap-to-expand row. ---
 
+function serviceLeadTitle(item) {
+  return item.name;
+}
+function serviceLeadSubtitle(item) {
+  return item.phone;
+}
+function serviceLeadBadge(item) {
+  return <LeadTypeBadge type={item.type} />;
+}
 // Service Bookings, Cart Orders, and Pickup Requests are merged into one
-// table now — each has a different shape, so "Details" renders whatever
-// fields that lead type actually has instead of forcing one column set.
-function combinedServiceDetails(item) {
-  if (item.type === "service") {
-    return (
-      <>
-        <p className="font-medium">{item.serviceName}</p>
-        <p className="text-ink/60">{item.address}</p>
-        {item.locationUrl && (
-          <a
-            href={item.locationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-xs font-semibold text-lime-dark hover:underline"
-          >
-            View on map &rarr;
-          </a>
-        )}
-        {item.message && <p className="text-xs text-ink/50">{item.message}</p>}
-      </>
-    );
-  }
-  if (item.type === "cart") {
-    return (
-      <>
-        <p>{(item.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}</p>
-        <p className="font-semibold text-ink">&#8377;{item.total}</p>
-      </>
-    );
-  }
-  if (item.type === "pickup") {
-    return (
-      <>
-        <p>{item.address}</p>
-        {item.service && <p className="text-xs text-ink/50">{item.service}</p>}
-      </>
-    );
-  }
-  return null;
-}
-
-const COMBINED_SERVICE_COLUMNS = [
-  { label: "Type", render: (item) => <LeadTypeBadge type={item.type} /> },
-  { label: "Name", render: (item) => item.name },
-  { label: "Phone", render: (item) => item.phone },
-  { label: "Details", render: (item) => <div className="text-sm">{combinedServiceDetails(item)}</div> },
-];
-
-function combinedServiceMobileCard(item) {
+// list now — each has a different shape, so the expanded detail panel
+// renders whatever fields that lead type actually has.
+function serviceLeadDetails(item) {
   return (
     <>
-      <div className="mb-1.5">
-        <LeadTypeBadge type={item.type} />
-      </div>
-      <p className="font-medium text-ink">{item.name}</p>
-      <p className="mt-1 text-sm text-ink/60">{item.phone}</p>
-      <div className="mt-2 text-sm text-ink/70">{combinedServiceDetails(item)}</div>
+      <DetailField label="Phone">{item.phone}</DetailField>
+      {item.type === "service" && (
+        <>
+          <DetailField label="Service">{item.serviceName}</DetailField>
+          <DetailField label="Address">
+            {item.address}
+            {item.locationUrl && (
+              <a
+                href={item.locationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 text-xs font-semibold text-lime-dark hover:underline"
+              >
+                View on map &rarr;
+              </a>
+            )}
+          </DetailField>
+          <DetailField label="Message">{item.message}</DetailField>
+        </>
+      )}
+      {item.type === "cart" && (
+        <>
+          <DetailField label="Items">{(item.items || []).map((it) => `${it.item} x${it.qty}`).join(", ")}</DetailField>
+          <DetailField label="Total">
+            <span className="font-semibold text-ink">&#8377;{item.total}</span>
+          </DetailField>
+        </>
+      )}
+      {item.type === "pickup" && (
+        <>
+          <DetailField label="Address">{item.address}</DetailField>
+          <DetailField label="Service">{item.service}</DetailField>
+        </>
+      )}
     </>
   );
 }
 
-const CONTACT_COLUMNS = [
-  { label: "Name", render: (c) => c.name },
-  { label: "Phone", render: (c) => c.phone },
-  { label: "Email", render: (c) => c.email },
-  { label: "Message", render: (c) => c.message },
-];
-function contactMobileCard(c) {
+function contactTitle(c) {
+  return c.name;
+}
+function contactSubtitle(c) {
+  return c.phone;
+}
+function contactDetails(c) {
   return (
     <>
-      <p className="font-medium text-ink">{c.name}</p>
-      <p className="mt-1 text-sm text-ink/60">
-        {c.phone}
-        {c.email ? ` · ${c.email}` : ""}
-      </p>
-      {c.message && <p className="mt-1 text-sm text-ink/70">{c.message}</p>}
+      <DetailField label="Phone">{c.phone}</DetailField>
+      <DetailField label="Email">{c.email}</DetailField>
+      <DetailField label="Message">{c.message}</DetailField>
     </>
   );
 }
 
-const FEEDBACK_COLUMNS = [
-  { label: "Service", render: (f) => <span className="font-medium">{f.service || "Service"}</span> },
-  { label: "Rating", render: (f) => <FeedbackStars rating={f.rating} /> },
-  { label: "Comment", render: (f) => f.comment },
-  { label: "Date", render: (f) => <span className="text-ink/60">{formatDate(f.createdAt)}</span> },
-];
-function feedbackMobileCard(f) {
+function feedbackTitle(f) {
+  return f.service || "Service";
+}
+function feedbackSubtitle(f) {
+  return formatDate(f.createdAt);
+}
+function feedbackBadge(f) {
+  return <FeedbackStars rating={f.rating} />;
+}
+function feedbackDetails(f) {
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-medium text-ink">{f.service || "Service"}</p>
+      <DetailField label="Rating">
         <FeedbackStars rating={f.rating} />
-      </div>
-      <p className="mt-1 text-xs text-ink/50">{formatDate(f.createdAt)}</p>
-      {f.comment && <p className="mt-2 text-sm text-ink/70">{f.comment}</p>}
+      </DetailField>
+      <DetailField label="Date">{formatDate(f.createdAt)}</DetailField>
+      <DetailField label="Comment">{f.comment}</DetailField>
     </>
   );
 }
 
-const WHATSAPP_COLUMNS = [
-  { label: "From", render: (m) => <span className="font-medium">{m.from}</span> },
-  { label: "Message", render: (m) => m.text },
-  { label: "Received", render: (m) => <span className="text-ink/60">{formatDateTime(m.createdAt)}</span> },
-];
-function whatsappMobileCard(m) {
+function whatsappTitle(m) {
+  return m.from;
+}
+function whatsappSubtitle(m) {
+  return formatDateTime(m.createdAt);
+}
+function whatsappDetails(m) {
   return (
     <>
-      <p className="font-medium text-ink">{m.from}</p>
-      <p className="mt-2 text-sm text-ink/70">{m.text}</p>
-      <p className="mt-1 text-xs text-ink/50">{formatDateTime(m.createdAt)}</p>
+      <DetailField label="Received">{formatDateTime(m.createdAt)}</DetailField>
+      <DetailField label="Message">{m.text}</DetailField>
     </>
   );
 }
@@ -801,8 +793,10 @@ export default function Admin() {
               <LeadTable
                 title="Service Bookings"
                 items={activeServiceLeadsFiltered}
-                columns={COMBINED_SERVICE_COLUMNS}
-                renderMobileCard={combinedServiceMobileCard}
+                renderTitle={serviceLeadTitle}
+                renderSubtitle={serviceLeadSubtitle}
+                renderBadge={serviceLeadBadge}
+                renderDetails={serviceLeadDetails}
                 onStatusChange={updateServiceLeadStatus}
                 onNotify={(item) => notifyCustomer(item.type, item)}
                 onArchiveToggle={archiveServiceLead}
@@ -820,8 +814,9 @@ export default function Admin() {
             <LeadTable
               title="Contact Messages"
               items={activeContacts}
-              columns={CONTACT_COLUMNS}
-              renderMobileCard={contactMobileCard}
+              renderTitle={contactTitle}
+              renderSubtitle={contactSubtitle}
+              renderDetails={contactDetails}
               onStatusChange={updateContactStatus}
               onNotify={(c) => notifyCustomer("contact", c)}
               onArchiveToggle={archiveContact}
@@ -838,8 +833,10 @@ export default function Admin() {
             <LeadTable
               title="Customer Feedback"
               items={activeFeedback}
-              columns={FEEDBACK_COLUMNS}
-              renderMobileCard={feedbackMobileCard}
+              renderTitle={feedbackTitle}
+              renderSubtitle={feedbackSubtitle}
+              renderBadge={feedbackBadge}
+              renderDetails={feedbackDetails}
               hasStatus={false}
               onArchiveToggle={archiveFeedbackItem}
               selectedIds={getSelected("feedback")}
@@ -858,8 +855,9 @@ export default function Admin() {
                 <LeadTable
                   title="Archived Contact Messages"
                   items={archivedContacts}
-                  columns={CONTACT_COLUMNS}
-                  renderMobileCard={contactMobileCard}
+                  renderTitle={contactTitle}
+                  renderSubtitle={contactSubtitle}
+                  renderDetails={contactDetails}
                   archived
                   onStatusChange={updateContactStatus}
                   onNotify={(c) => notifyCustomer("contact", c)}
@@ -879,8 +877,10 @@ export default function Admin() {
                   <LeadTable
                     title="Archived Service Bookings"
                     items={archivedServiceLeadsFiltered}
-                    columns={COMBINED_SERVICE_COLUMNS}
-                    renderMobileCard={combinedServiceMobileCard}
+                    renderTitle={serviceLeadTitle}
+                    renderSubtitle={serviceLeadSubtitle}
+                    renderBadge={serviceLeadBadge}
+                    renderDetails={serviceLeadDetails}
                     archived
                     onStatusChange={updateServiceLeadStatus}
                     onNotify={(item) => notifyCustomer(item.type, item)}
@@ -899,8 +899,10 @@ export default function Admin() {
                 <LeadTable
                   title="Archived Feedback"
                   items={archivedFeedback}
-                  columns={FEEDBACK_COLUMNS}
-                  renderMobileCard={feedbackMobileCard}
+                  renderTitle={feedbackTitle}
+                  renderSubtitle={feedbackSubtitle}
+                  renderBadge={feedbackBadge}
+                  renderDetails={feedbackDetails}
                   hasStatus={false}
                   archived
                   onArchiveToggle={archiveFeedbackItem}
@@ -916,8 +918,9 @@ export default function Admin() {
                 <LeadTable
                   title="Archived WhatsApp Messages"
                   items={archivedWhatsapp}
-                  columns={WHATSAPP_COLUMNS}
-                  renderMobileCard={whatsappMobileCard}
+                  renderTitle={whatsappTitle}
+                  renderSubtitle={whatsappSubtitle}
+                  renderDetails={whatsappDetails}
                   hasStatus={false}
                   archived
                   onArchiveToggle={archiveWhatsapp}
