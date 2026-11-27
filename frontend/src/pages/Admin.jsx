@@ -23,17 +23,20 @@ import { auth, db } from "../lib/firebase.js";
 import { img } from "../lib/assets.js";
 import { leadServiceLabel, sendLeadUpdateViaWhatsApp } from "../lib/whatsapp.js";
 
+// Order here is also the tab-bar display order, and TABS[0] is the tab
+// shown when /admin is opened with no ?tab= param — Service Bookings is
+// first so it's what the admin lands on.
 const TABS = [
-  { id: "offer", label: "Offer", icon: ImageIcon },
-  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
-  { id: "contact", label: "Contact Us", icon: Mail },
-  { id: "pricing", label: "Pricing & Discounts", icon: Tag },
   // Service Bookings, Cart Orders, and Pickup Requests all live under this
   // one tab now — they're all just `leads` with a different `type`, and
   // splitting them across three tabs was more navigation than the data
   // warranted. The type filter below lets the admin narrow back down.
   { id: "service", label: "Service Bookings", icon: CalendarClock },
+  { id: "pricing", label: "Pricing & Discounts", icon: Tag },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { id: "contact", label: "Contact Us", icon: Mail },
   { id: "feedback", label: "Feedback", icon: Star },
+  { id: "offer", label: "Offer", icon: ImageIcon },
   { id: "archive", label: "Archive", icon: ArchiveIcon },
 ];
 
