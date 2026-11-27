@@ -113,10 +113,12 @@ export default function BookNowModal({ service, onClose }) {
               <button
                 type="button"
                 onClick={() => setShowLocationPicker(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-lime-dark hover:underline"
+                className={`inline-flex items-center gap-1.5 !px-3.5 !py-1.5 !text-[11px] ${
+                  location ? "btn-pill bg-lime/15 text-lime-dark hover:bg-lime/25" : "btn-pill-outline"
+                }`}
               >
                 {location ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
-                {location ? "Location pinned — tap to change" : "Pin your location on map (optional)"}
+                {location ? "Location Pinned — Tap to Change" : "Pin Your Location on Map (Optional)"}
               </button>
               {location && (
                 <p className="mt-1 text-xs text-ink/50">
